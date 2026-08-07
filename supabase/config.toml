@@ -244,7 +244,7 @@ host = "smtp.resend.com"
 port = 587
 user = "resend"
 pass = "env(RESEND_API_KEY)"
-admin_email = "contact@finkith.com"
+admin_email = "noreply@finkith.com"
 sender_name = "Finkith"
 
 [auth.email.template.confirmation]

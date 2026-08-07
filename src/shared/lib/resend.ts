@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 // finkith.com is verified at resend.com/domains, so this sender delivers to
 // any recipient.
-export const EMAIL_FROM = "Finkith <contact@finkith.com>";
+export const EMAIL_FROM = "Finkith <noreply@finkith.com>";
 
 export const EMAIL_SENDING_ENABLED = true;
 
