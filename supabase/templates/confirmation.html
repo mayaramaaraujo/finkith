@@ -8,23 +8,26 @@
   bg-base #131120, bg-elevated #1a1726, primary #c264af, primary-light
   #d27cc0, text-secondary #e7e4f0, text-subtle #8d8aa3, text-faintest #56536a.
 
-  The app is bilingual (en / pt-BR) but Supabase auth emails have no locale
-  variable — the template is rendered before we know anything about the
-  recipient — so both languages ship in every message, English first.
+  Language comes from `.Data.locale` — Supabase renders these templates with
+  Go's text/template and exposes the user_metadata written at signup, where
+  SignupForm.tsx stores the locale the form was filled in. Anything other than
+  "pt-BR" (including metadata written before that field existed) falls through
+  to English, matching DEFAULT_LOCALE in shared/lib/i18n/config.ts.
 -->
 <!doctype html>
-<html lang="en">
+<html lang="{{ if eq .Data.locale "pt-BR" }}pt-BR{{ else }}en{{ end }}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
     <meta name="supported-color-schemes" content="dark" />
-    <title>Confirm your Finkith account</title>
+    <title>{{ if eq .Data.locale "pt-BR" }}Confirme sua conta Finkith{{ else }}Confirm your Finkith account{{ end }}</title>
   </head>
   <body style="margin: 0; padding: 0; background-color: #131120;">
     <!-- Preview line shown in the inbox list, before the message is opened. -->
     <div style="display: none; max-height: 0; overflow: hidden; opacity: 0; mso-hide: all;">
-      Confirm your email to activate your Finkith account. &#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;
+      {{ if eq .Data.locale "pt-BR" }}Confirme seu e-mail para ativar sua conta Finkith.{{ else }}Confirm your email to activate your Finkith account.{{ end }}
+      &#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;
     </div>
 
     <table
@@ -58,13 +61,12 @@
                 <h1
                   style="margin: 32px 0 0; font-family: 'Sora', 'Manrope', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.25; color: #ffffff;"
                 >
-                  Confirm your email
+                  {{ if eq .Data.locale "pt-BR" }}Confirme seu e-mail{{ else }}Confirm your email{{ end }}
                 </h1>
                 <p
                   style="margin: 12px 0 0; font-family: 'Manrope', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #8d8aa3;"
                 >
-                  You're one click from the finish line. Confirm this address to activate your
-                  Finkith account and start tracking what everyone brings in and what's owed.
+                  {{ if eq .Data.locale "pt-BR" }}Falta um clique. Confirme este endereço para ativar sua conta Finkith e começar a acompanhar o que cada um traz e o que é devido.{{ else }}You're one click from the finish line. Confirm this address to activate your Finkith account and start tracking what everyone brings in and what's owed.{{ end }}
                 </p>
 
                 <!-- Button. Table-based so Outlook renders the fill; it squares off
@@ -76,31 +78,16 @@
                         href="{{ .ConfirmationURL }}"
                         style="display: inline-block; padding: 15px 32px; font-family: 'Sora', 'Manrope', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; line-height: 1; color: #ffffff; text-decoration: none; border-radius: 15px;"
                       >
-                        Confirm my email
+                        {{ if eq .Data.locale "pt-BR" }}Confirmar meu e-mail{{ else }}Confirm my email{{ end }}
                       </a>
                     </td>
                   </tr>
                 </table>
 
-                <hr style="margin: 32px 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08);" />
-
-                <h2
-                  style="margin: 0; font-family: 'Sora', 'Manrope', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 17px; font-weight: 600; letter-spacing: -0.2px; line-height: 1.3; color: #e7e4f0;"
-                >
-                  Confirme seu e-mail
-                </h2>
-                <p
-                  style="margin: 10px 0 0; font-family: 'Manrope', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #8d8aa3;"
-                >
-                  Falta um clique. Confirme este endereço no botão acima para ativar sua conta
-                  Finkith e começar a acompanhar o que cada um traz e o que é devido.
-                </p>
-
                 <p
                   style="margin: 32px 0 0; font-family: 'Manrope', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #6b6880;"
                 >
-                  If the button doesn't work, paste this link into your browser —
-                  <span style="color: #56536a;">se o botão não funcionar, cole este link no navegador:</span>
+                  {{ if eq .Data.locale "pt-BR" }}Se o botão não funcionar, cole este link no navegador:{{ else }}If the button doesn't work, paste this link into your browser:{{ end }}
                 </p>
                 <p style="margin: 8px 0 0; font-family: 'Manrope', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; word-break: break-all;">
                   <a href="{{ .ConfirmationURL }}" style="color: #d27cc0; text-decoration: underline;">{{ .ConfirmationURL }}</a>
@@ -115,18 +102,14 @@
                 <p
                   style="margin: 0; font-family: 'Manrope', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.7; color: #56536a;"
                 >
-                  This link expires in one hour. If you didn't create a Finkith account, you can
-                  safely ignore this email.
-                  <br />
-                  Este link expira em uma hora. Se você não criou uma conta no Finkith, pode
-                  ignorar este e-mail com segurança.
+                  {{ if eq .Data.locale "pt-BR" }}Este link expira em uma hora. Se você não criou uma conta no Finkith, pode ignorar este e-mail com segurança.{{ else }}This link expires in one hour. If you didn't create a Finkith account, you can safely ignore this email.{{ end }}
                 </p>
                 <p
                   style="margin: 16px 0 0; font-family: 'Manrope', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.7; color: #56536a;"
                 >
-                  <a href="https://www.finkith.com/terms" style="color: #56536a; text-decoration: underline;">Terms</a>
+                  <a href="https://www.finkith.com/terms" style="color: #56536a; text-decoration: underline;">{{ if eq .Data.locale "pt-BR" }}Termos{{ else }}Terms{{ end }}</a>
                   &nbsp;&middot;&nbsp;
-                  <a href="https://www.finkith.com/privacy" style="color: #56536a; text-decoration: underline;">Privacy Policy</a>
+                  <a href="https://www.finkith.com/privacy" style="color: #56536a; text-decoration: underline;">{{ if eq .Data.locale "pt-BR" }}Política de Privacidade{{ else }}Privacy Policy{{ end }}</a>
                 </p>
               </td>
             </tr>

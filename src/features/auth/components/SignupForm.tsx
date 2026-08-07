@@ -19,7 +19,7 @@ interface SignupFormProps {
 
 export function SignupForm({ next }: SignupFormProps) {
   const router = useRouter();
-  const { dict } = useTranslation();
+  const { dict, locale } = useTranslation();
   const signupSchema = useMemo(() => createSignupSchema(dict), [dict]);
   const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(null);
   const destination = next?.startsWith("/") && !next.startsWith("//") ? next : "/";
@@ -39,7 +39,10 @@ export function SignupForm({ next }: SignupFormProps) {
       email: values.email,
       password: values.password,
       options: {
-        data: { full_name: values.name },
+        // `locale` lands in user_metadata, which is the only thing the
+        // confirmation email template can read about the recipient — it picks
+        // the language off `.Data.locale`. See supabase/templates/.
+        data: { full_name: values.name, locale },
         emailRedirectTo: redirectTo.toString(),
       },
     });

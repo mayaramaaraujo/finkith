@@ -248,7 +248,10 @@ admin_email = "contact@finkith.com"
 sender_name = "Finkith"
 
 [auth.email.template.confirmation]
-subject = "Confirm your Finkith account · Confirme sua conta Finkith"
+# Plain text, not a template: Go templating is documented for template content
+# but not for subjects, so this one line stays in DEFAULT_LOCALE's language
+# while the body follows the recipient's `.Data.locale`.
+subject = "Confirm your Finkith account"
 content_path = "./supabase/templates/confirmation.html"
 
 # Uncomment to customize email template
