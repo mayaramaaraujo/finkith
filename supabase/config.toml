@@ -247,6 +247,10 @@ pass = "env(RESEND_API_KEY)"
 admin_email = "contact@finkith.com"
 sender_name = "Finkith"
 
+[auth.email.template.confirmation]
+subject = "Confirm your Finkith account · Confirme sua conta Finkith"
+content_path = "./supabase/templates/confirmation.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
