@@ -12,10 +12,11 @@ import { SegmentedControl } from "@/shared/components/SegmentedControl";
 import { Chip } from "@/shared/components/Chip";
 import { Switch } from "@/shared/components/Switch";
 import { addBill, updateBill, deleteBill } from "@/features/bills/api/actions";
-import { createBillSchema, type BillValues, type Bill, type DefaultBillCategory } from "@/features/bills/types";
+import { createBillFormSchema, type BillValues, type Bill, type DefaultBillCategory } from "@/features/bills/types";
 import type { Category } from "@/features/categories/types";
 import { useTranslation } from "@/shared/lib/i18n/context";
-import { CURRENCY_SYMBOL, type Currency } from "@/shared/lib/currency";
+import { formatAmountForInput, formatMoneyParts, type Currency } from "@/shared/lib/money";
+import type { Locale } from "@/shared/lib/i18n/config";
 
 interface BillSheetProps {
   open: boolean;
@@ -25,12 +26,12 @@ interface BillSheetProps {
   categories: Category[];
 }
 
-type BillFormInput = z.input<ReturnType<typeof createBillSchema>>;
+type BillFormInput = z.input<ReturnType<typeof createBillFormSchema>>;
 
 function defaultValues(categories: Category[]): BillFormInput {
   return {
     name: "",
-    // "" (not undefined) so `reset` actually clears the number input's DOM value
+    // "" (not undefined) so `reset` actually clears the input's DOM value
     amount: "",
     dueDay: new Date().getDate(),
     fixed: true,
@@ -40,10 +41,10 @@ function defaultValues(categories: Category[]): BillFormInput {
   };
 }
 
-function billToValues(bill: Bill): BillFormInput {
+function billToValues(bill: Bill, locale: Locale): BillFormInput {
   return {
     name: bill.name,
-    amount: bill.amount,
+    amount: formatAmountForInput(bill.amount, locale),
     dueDay: bill.dueDay,
     fixed: bill.fixed,
     category: bill.category as BillValues["category"],
@@ -53,8 +54,9 @@ function billToValues(bill: Bill): BillFormInput {
 }
 
 export function BillSheet({ open, onClose, bill, currency, categories }: BillSheetProps) {
-  const { dict } = useTranslation();
-  const billSchema = useMemo(() => createBillSchema(dict), [dict]);
+  const { dict, locale } = useTranslation();
+  const billSchema = useMemo(() => createBillFormSchema(dict, locale), [dict, locale]);
+  const { symbol, symbolFirst } = formatMoneyParts(0, currency, locale);
   const {
     register,
     control,
@@ -64,12 +66,12 @@ export function BillSheet({ open, onClose, bill, currency, categories }: BillShe
     formState: { errors, isSubmitting },
   } = useForm<BillFormInput, unknown, BillValues>({
     resolver: zodResolver(billSchema),
-    defaultValues: bill ? billToValues(bill) : defaultValues(categories),
+    defaultValues: bill ? billToValues(bill, locale) : defaultValues(categories),
   });
 
   useEffect(() => {
-    if (open) reset(bill ? billToValues(bill) : defaultValues(categories));
-  }, [open, bill, categories, reset]);
+    if (open) reset(bill ? billToValues(bill, locale) : defaultValues(categories));
+  }, [open, bill, categories, locale, reset]);
 
   async function onSubmit(values: BillValues) {
     const result = bill ? await updateBill(bill.id, values) : await addBill(values);
@@ -108,9 +110,11 @@ export function BillSheet({ open, onClose, bill, currency, categories }: BillShe
         <div className="flex gap-2.5">
           <div className="flex-1">
             <Input
-              leadingText={CURRENCY_SYMBOL[currency]}
-              type="number"
-              step="0.01"
+              leadingText={symbolFirst ? symbol : undefined}
+              trailingText={symbolFirst ? undefined : symbol}
+              // Text, not number: a native number input rejects the group and
+              // decimal separators used in Spanish and Brazilian Portuguese.
+              type="text"
               inputMode="decimal"
               placeholder="0"
               invalid={!!errors.amount}

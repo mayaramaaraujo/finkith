@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/shared/lib/supabase/server";
 import { getCurrentGroup } from "@/shared/lib/supabase/get-current-group";
-import { isCurrency, type Currency } from "@/shared/lib/currency";
+import { isCurrency, type Currency } from "@/shared/lib/money";
 import { createGroupSchema, type CreateGroupValues } from "@/features/groups/types";
 
 function deriveDisplayName(user: User) {

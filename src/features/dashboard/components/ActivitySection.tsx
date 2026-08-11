@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { Chip } from "@/shared/components/Chip";
-import { formatCurrency } from "@/shared/lib/utils";
-import { CURRENCY_SYMBOL, type Currency } from "@/shared/lib/currency";
+import { formatMoney, type Currency } from "@/shared/lib/money";
 import { mergeActivity, type ActivityItem, type ActivityFilter } from "@/features/dashboard/lib";
 import { useTranslation } from "@/shared/lib/i18n/context";
 import { IncomeSheet } from "@/features/income/components/IncomeSheet";
@@ -36,7 +35,7 @@ export function ActivitySection({
   currency,
   categories,
 }: ActivitySectionProps) {
-  const { dict } = useTranslation();
+  const { dict, locale } = useTranslation();
   const [filter, setFilter] = useState<ActivityFilter>("all");
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
@@ -95,7 +94,7 @@ export function ActivitySection({
                 <p className="mt-0.5 truncate text-xs text-text-subtle">{item.sub}</p>
               </div>
               <span className={`font-display text-sm font-bold ${item.amountColorClass}`}>
-                {item.isIncome ? "+" : "−"}{CURRENCY_SYMBOL[currency]}{formatCurrency(item.amount, currency)}
+                {item.isIncome ? "+" : "−"}{formatMoney(item.amount, currency, locale)}
               </span>
             </button>
           ))}

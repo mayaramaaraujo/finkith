@@ -115,6 +115,10 @@ export const ptBR: Dictionary = {
     confirmDelete: "Sim, excluir minha conta",
     language: "Idioma",
     currency: "Moeda",
+    currencyChangeTitle: "Mudar a moeda?",
+    currencyChangeBody: (from: string, to: string) =>
+      `Os valores já salvos não serão convertidos — uma conta de 100 ${from} passará a aparecer como 100 ${to}. Só mudam o símbolo e a formatação.`,
+    currencyChangeConfirm: "Mudar a moeda",
     categories: "Categorias",
     billCategories: "Contas",
     incomeCategories: "Renda",

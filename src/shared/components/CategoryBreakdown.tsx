@@ -1,7 +1,7 @@
 import { ProgressBar } from "@/shared/components/ProgressBar";
 import { CHIP_ACCENT_BG_CLASSES, type ChipAccent } from "@/shared/lib/chip-accents";
-import { formatCurrency } from "@/shared/lib/utils";
-import { CURRENCY_SYMBOL, type Currency } from "@/shared/lib/currency";
+import { formatMoney, type Currency } from "@/shared/lib/money";
+import type { Locale } from "@/shared/lib/i18n/config";
 
 export interface CategoryBreakdownRow {
   category: string;
@@ -16,9 +16,10 @@ interface CategoryBreakdownProps {
   emptyMessage: string;
   categoryLabel: (category: string) => string;
   currency: Currency;
+  locale: Locale;
 }
 
-export function CategoryBreakdown({ title, rows, emptyMessage, categoryLabel, currency }: CategoryBreakdownProps) {
+export function CategoryBreakdown({ title, rows, emptyMessage, categoryLabel, currency, locale }: CategoryBreakdownProps) {
   return (
     <div>
       <p className="mt-6 mb-3 font-display text-base font-semibold text-text-primary">{title}</p>
@@ -36,7 +37,7 @@ export function CategoryBreakdown({ title, rows, emptyMessage, categoryLabel, cu
                   {categoryLabel(row.category)}
                 </span>
                 <span className="text-xs font-semibold text-text-tertiary">
-                  {CURRENCY_SYMBOL[currency]}{formatCurrency(row.amount, currency)}
+                  {formatMoney(row.amount, currency, locale)}
                 </span>
               </div>
               <ProgressBar

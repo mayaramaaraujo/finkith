@@ -12,9 +12,10 @@ import { Button } from "@/shared/components/Button";
 import { Avatar, type AvatarColorIndex } from "@/shared/components/Avatar";
 import { Chip } from "@/shared/components/Chip";
 import { getInitials } from "@/shared/lib/utils";
-import { CURRENCY_SYMBOL, type Currency } from "@/shared/lib/currency";
+import { formatAmountForInput, formatMoneyParts, type Currency } from "@/shared/lib/money";
 import { addEntry, updateEntry, deleteEntry } from "@/features/income/api/actions";
-import { createAddIncomeSchema, type IncomeEntry, type DefaultIncomeCategory } from "@/features/income/types";
+import { createAddIncomeFormSchema, type IncomeEntry, type DefaultIncomeCategory } from "@/features/income/types";
+import type { Locale } from "@/shared/lib/i18n/config";
 import type { GroupMember } from "@/features/groups/types";
 import type { Category } from "@/features/categories/types";
 import { useTranslation } from "@/shared/lib/i18n/context";
@@ -29,18 +30,18 @@ interface IncomeSheetProps {
   categories: Category[];
 }
 
-type IncomeFormInput = z.input<ReturnType<typeof createAddIncomeSchema>>;
-type IncomeFormValues = z.output<ReturnType<typeof createAddIncomeSchema>>;
+type IncomeFormInput = z.input<ReturnType<typeof createAddIncomeFormSchema>>;
+type IncomeFormValues = z.output<ReturnType<typeof createAddIncomeFormSchema>>;
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function entryToValues(entry: IncomeEntry): IncomeFormInput {
+function entryToValues(entry: IncomeEntry, locale: Locale): IncomeFormInput {
   return {
     memberId: entry.memberId,
     category: entry.category,
-    amount: entry.amount,
+    amount: formatAmountForInput(entry.amount, locale),
     entryDate: entry.entryDate,
     note: entry.note ?? "",
   };
@@ -50,7 +51,7 @@ function defaultValues(defaultMemberId: string, categories: Category[]): IncomeF
   return {
     memberId: defaultMemberId,
     category: categories[0]?.name ?? "",
-    // "" (not undefined) so `reset` actually clears the number input's DOM value
+    // "" (not undefined) so `reset` actually clears the input's DOM value
     amount: "",
     entryDate: todayDate(),
     note: "",
@@ -66,8 +67,9 @@ export function IncomeSheet({
   currency,
   categories,
 }: IncomeSheetProps) {
-  const { dict } = useTranslation();
-  const addIncomeSchema = useMemo(() => createAddIncomeSchema(dict), [dict]);
+  const { dict, locale } = useTranslation();
+  const addIncomeSchema = useMemo(() => createAddIncomeFormSchema(dict, locale), [dict, locale]);
+  const { symbol, symbolFirst } = formatMoneyParts(0, currency, locale);
   const {
     register,
     control,
@@ -77,14 +79,14 @@ export function IncomeSheet({
     formState: { errors, isSubmitting },
   } = useForm<IncomeFormInput, unknown, IncomeFormValues>({
     resolver: zodResolver(addIncomeSchema),
-    defaultValues: entry ? entryToValues(entry) : defaultValues(defaultMemberId, categories),
+    defaultValues: entry ? entryToValues(entry, locale) : defaultValues(defaultMemberId, categories),
   });
 
   useEffect(() => {
     if (open) {
-      reset(entry ? entryToValues(entry) : defaultValues(defaultMemberId, categories));
+      reset(entry ? entryToValues(entry, locale) : defaultValues(defaultMemberId, categories));
     }
-  }, [open, entry, defaultMemberId, categories, reset]);
+  }, [open, entry, defaultMemberId, categories, locale, reset]);
 
   async function onSubmit(values: IncomeFormValues) {
     const result = entry ? await updateEntry(entry.id, values) : await addEntry(values);
@@ -111,9 +113,11 @@ export function IncomeSheet({
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-1">
         <div>
           <Input
-            leadingText={CURRENCY_SYMBOL[currency]}
-            type="number"
-            step="0.01"
+            leadingText={symbolFirst ? symbol : undefined}
+            trailingText={symbolFirst ? undefined : symbol}
+            // Text, not number: a native number input rejects the group and
+            // decimal separators used in Spanish and Brazilian Portuguese.
+            type="text"
             inputMode="decimal"
             placeholder="0"
             invalid={!!errors.amount}

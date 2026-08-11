@@ -75,11 +75,13 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
         emptyMessage={dict.history.noIncomeThisMonth}
         categoryLabel={(category) => dict.categories.income[category as DefaultIncomeCategory] ?? category}
         currency={currentGroup.currency}
+        locale={locale}
       />
       <EarlierMonths
         months={earlierMonths(trend, intlLocale)}
         dict={dict}
         currency={currentGroup.currency}
+        locale={locale}
       />
     </div>
   );

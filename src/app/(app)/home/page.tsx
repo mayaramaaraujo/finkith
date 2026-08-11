@@ -107,19 +107,20 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   const hasAnyActivity = (anyEntriesRes.count ?? 0) > 0 || bills.length > 0;
 
-  const hero = computeHero(entries, bills, members.length, dict, currentGroup.currency);
+  const hero = computeHero(entries, bills, members.length, dict, currentGroup.currency, locale);
   const memberStrip = computeMemberStrip(members, entries);
   const incomeItems = buildIncomeActivity(entries, members, dict, LOCALE_INTL_TAG[locale]);
   const billItems = buildBillActivity(bills, month, dict);
 
   return (
     <div>
-      <HeroSection hero={hero} currency={currentGroup.currency} />
+      <HeroSection hero={hero} currency={currentGroup.currency} locale={locale} />
       <MemberStrip
         members={memberStrip}
         addLabel={dict.home.add}
         byPersonLabel={dict.home.byPerson}
         currency={currentGroup.currency}
+        locale={locale}
       />
 
       {hasAnyActivity ? (
@@ -131,7 +132,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           members={members}
           currentMemberId={currentGroup.memberId}
           currency={currentGroup.currency}
-          categories={categories}
+            categories={categories}
         />
       ) : (
         <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl border border-surface-border bg-surface-1 p-6 text-center">

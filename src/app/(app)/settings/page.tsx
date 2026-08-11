@@ -38,7 +38,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const month = monthParam ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const { start, end } = monthRange(month);
 
-  const dict = getDictionary(await getLocale());
+  const locale = await getLocale();
+  const dict = getDictionary(locale);
 
   const supabase = await createClient();
   const headersList = await headers();
@@ -81,7 +82,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     <div className="flex flex-col gap-8">
       <InviteLinkCard inviteUrl={inviteUrl} />
 
-      <MembersList rows={rows} dict={dict} currency={currentGroup.currency} />
+      <MembersList rows={rows} dict={dict} currency={currentGroup.currency} locale={locale} />
 
       <div className="divide-y divide-surface-border rounded-xl border border-surface-border bg-surface-1">
         <div className="flex items-center justify-between p-4">

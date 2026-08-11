@@ -1,5 +1,5 @@
-import { formatCurrency } from "@/shared/lib/utils";
-import { CURRENCY_SYMBOL, type Currency } from "@/shared/lib/currency";
+import { formatMoney, type Currency } from "@/shared/lib/money";
+import type { Locale } from "@/shared/lib/i18n/config";
 import type { EarlierMonth } from "@/features/history/lib";
 import type { Dictionary } from "@/shared/lib/i18n/dictionaries";
 
@@ -7,9 +7,10 @@ interface EarlierMonthsProps {
   months: EarlierMonth[];
   dict: Dictionary;
   currency: Currency;
+  locale: Locale;
 }
 
-export function EarlierMonths({ months, dict, currency }: EarlierMonthsProps) {
+export function EarlierMonths({ months, dict, currency, locale }: EarlierMonthsProps) {
   return (
     <div>
       <p className="mt-6 mb-3 font-display text-base font-semibold text-text-primary">
@@ -28,7 +29,7 @@ export function EarlierMonths({ months, dict, currency }: EarlierMonthsProps) {
             >
               <span className="text-sm font-semibold text-text-primary">{point.label}</span>
               <span className="font-display text-sm font-bold text-text-primary">
-                {CURRENCY_SYMBOL[currency]}{formatCurrency(point.total, currency)}
+                {formatMoney(point.total, currency, locale)}
               </span>
             </div>
           ))}

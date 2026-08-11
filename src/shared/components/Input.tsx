@@ -7,11 +7,13 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   icon?: ComponentType<{ className?: string }>;
   /** Leading text/element (e.g. a currency symbol) shown instead of `icon`. */
   leadingText?: ReactNode;
+  /** Trailing text/element — currency symbols follow the amount in some locales. */
+  trailingText?: ReactNode;
   invalid?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { icon: Icon, leadingText, invalid = false, className = "", ...props },
+  { icon: Icon, leadingText, trailingText, invalid = false, className = "", ...props },
   ref,
 ) {
   return (
@@ -32,6 +34,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         )}
         {...props}
       />
+      {trailingText ? (
+        <span className="shrink-0 font-display text-base font-bold text-text-subtle">{trailingText}</span>
+      ) : null}
     </div>
   );
 });

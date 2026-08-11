@@ -1,6 +1,7 @@
 import { Avatar, type AvatarColorIndex } from "@/shared/components/Avatar";
-import { getInitials, formatCurrency } from "@/shared/lib/utils";
-import { CURRENCY_SYMBOL, type Currency } from "@/shared/lib/currency";
+import { getInitials } from "@/shared/lib/utils";
+import { formatMoney, type Currency } from "@/shared/lib/money";
+import type { Locale } from "@/shared/lib/i18n/config";
 import type { GroupMember } from "@/features/groups/types";
 import type { Dictionary } from "@/shared/lib/i18n/dictionaries";
 
@@ -14,6 +15,7 @@ interface MembersListProps {
   rows: MemberRow[];
   dict: Dictionary;
   currency: Currency;
+  locale: Locale;
 }
 
 function roleLabel(member: GroupMember, dict: Dictionary) {
@@ -27,7 +29,7 @@ function roleColorClass(member: GroupMember, isYou: boolean) {
   return "text-neutral-accent";
 }
 
-export function MembersList({ rows, dict, currency }: MembersListProps) {
+export function MembersList({ rows, dict, currency, locale }: MembersListProps) {
   return (
     <div>
       <p className="mb-3 font-display text-base font-semibold text-text-primary">{dict.settings.members}</p>
@@ -57,7 +59,7 @@ export function MembersList({ rows, dict, currency }: MembersListProps) {
               <p className="mt-0.5 text-xs text-text-subtle">
                 {member.status === "invited"
                   ? dict.settings.invitationSent
-                  : dict.settings.thisMonth(`${CURRENCY_SYMBOL[currency]}${formatCurrency(monthTotal, currency)}`)}
+                  : dict.settings.thisMonth(formatMoney(monthTotal, currency, locale))}
               </p>
             </div>
             <span className={`shrink-0 text-xs font-semibold ${roleColorClass(member, isYou)}`}>

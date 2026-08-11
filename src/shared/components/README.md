@@ -4,7 +4,7 @@ Design-system primitives shared across features, built on the tokens in `src/app
 
 - **Avatar** — circular initials badge, cycles through the app's 6-color avatar palette (`colorIndex` 0–5)
 - **Button** — `primary` / `secondary` / `outline` / `danger` variants, `sm` / `md` sizes
-- **Input** — text input with optional leading icon or `leadingText` (e.g. a "€" currency symbol), `invalid` state
+- **Input** — text input with optional leading icon, `leadingText`, or `trailingText` (currency symbols follow the amount in some locales — ask `formatMoneyParts().symbolFirst` which side to use), `invalid` state
 - **Select** — compact native `<select>` styled to match the design tokens (e.g. Settings' Language/Currency rows), value/onChange over a `{ value, label }[]` options list
 - **DatePicker** — calendar-popup date field (built on `react-datepicker`), value/onChange in `YYYY-MM-DD`, opens a full-screen portal calendar instead of the native OS date input
 - **Chip** — toggleable pill (category/filter selection), `selected` + `accent` props. Re-exports `ChipAccent`, `CHIP_ACCENTS` (the full list of accent tokens, e.g. for a color picker), and `CHIP_ACCENT_BG_CLASSES` (accent → solid `bg-*` class, for dots/swatches — Tailwind needs the full class name statically present, so don't build it via string interpolation) from `@/shared/lib/chip-accents`. **Import those three from `@/shared/lib/chip-accents` directly (not `./Chip`) in any Server Component or Server Action** — `Chip.tsx` is `"use client"`, so a server-side import of its *values* (not types) resolves to an opaque client reference instead of the real value
@@ -12,9 +12,9 @@ Design-system primitives shared across features, built on the tokens in `src/app
 - **Sheet** — bottom sheet modal (portal, Escape-to-close, backdrop click, scroll lock)
 - **BottomNav** — fixed app-shell nav with a center FAB
 - **ProgressBar** — thin rounded track with a filled bar (`percent` 0-100, optional `color` override)
-- **CategoryBreakdown** — colored dot + name + amount + `ProgressBar` per category, sorted rows with an empty state; feature passes in `title`, `emptyMessage`, `categoryLabel` translator, and `currency`. Used by History (income) and Bills (paid spend) pages.
+- **CategoryBreakdown** — colored dot + name + amount + `ProgressBar` per category, sorted rows with an empty state; feature passes in `title`, `emptyMessage`, `categoryLabel` translator, plus `currency` and `locale` for formatting. Used by History (income) and Bills (paid spend) pages.
 - **Switch** — small toggle (track + sliding knob), e.g. the bill sheet's "Repeat every month" row
-- **LanguageSwitcher** — EN/PT-BR `Select` backed by `useTranslation()` from `@/shared/lib/i18n/context`
+- **LanguageSwitcher** — `Select` over `LOCALES` (EN / PT-BR / ES-ES), backed by `useTranslation()` from `@/shared/lib/i18n/context`
 - **LogoMark** — the Finkith brand mark (wallet + cash + bar chart), rendered from `src/app/icon.svg`. Used by `AuthShell`
 - **LegalPageShell** — back link + title/last-updated + section list layout for long-form legal copy, locale-aware. Takes a `LegalPageContent` (`title`, `lastUpdated`, `intro`, `sections`) plus `locale`; used by `/privacy` and `/terms` pages, each sourcing content from their own `content.ts`
 

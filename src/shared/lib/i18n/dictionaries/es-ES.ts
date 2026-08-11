@@ -115,6 +115,10 @@ export const esES: Dictionary = {
     confirmDelete: "Sí, eliminar mi cuenta",
     language: "Idioma",
     currency: "Moneda",
+    currencyChangeTitle: "¿Cambiar de moneda?",
+    currencyChangeBody: (from: string, to: string) =>
+      `Los importes ya guardados no se convertirán: una factura de 100 ${from} pasará a mostrarse como 100 ${to}. Solo cambian el símbolo y el formato.`,
+    currencyChangeConfirm: "Cambiar de moneda",
     categories: "Categorías",
     billCategories: "Facturas",
     incomeCategories: "Ingresos",

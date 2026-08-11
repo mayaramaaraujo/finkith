@@ -12,7 +12,7 @@ import { BillSheet } from "@/features/bills/components/BillSheet";
 import { IncomeSheet } from "@/features/income/components/IncomeSheet";
 import { categoriesByType } from "@/features/categories/lib";
 import type { Category } from "@/features/categories/types";
-import type { Currency } from "@/shared/lib/currency";
+import type { Currency } from "@/shared/lib/money";
 import { LOCALE_INTL_TAG } from "@/shared/lib/i18n/config";
 import { useTranslation } from "@/shared/lib/i18n/context";
 import type { Dictionary } from "@/shared/lib/i18n/dictionaries";

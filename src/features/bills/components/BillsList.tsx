@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { Repeat } from "lucide-react";
 import { Chip, CHIP_ACCENT_BG_CLASSES, type ChipAccent } from "@/shared/components/Chip";
-import { formatCurrency } from "@/shared/lib/utils";
-import { CURRENCY_SYMBOL, type Currency } from "@/shared/lib/currency";
+import { formatMoney, type Currency } from "@/shared/lib/money";
 import { filterBills, getBillDueInfo, type BillFilter } from "@/features/bills/lib";
 import { type Bill, type DefaultBillCategory } from "@/features/bills/types";
 import { colorsByCategoryName } from "@/features/categories/lib";
@@ -20,7 +19,7 @@ interface BillsListProps {
 }
 
 export function BillsList({ bills, currency, categories }: BillsListProps) {
-  const { dict } = useTranslation();
+  const { dict, locale } = useTranslation();
   const [filter, setFilter] = useState<BillFilter>("all");
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
 
@@ -97,7 +96,7 @@ export function BillsList({ bills, currency, categories }: BillsListProps) {
               <span
                 className={`font-display text-sm font-bold ${dueInfo.isPaidThisCycle ? "text-positive" : "text-text-primary"}`}
               >
-                {CURRENCY_SYMBOL[currency]}{formatCurrency(bill.amount, currency)}
+                {formatMoney(bill.amount, currency, locale)}
               </span>
             </div>
           );

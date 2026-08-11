@@ -1,14 +1,18 @@
-import { formatCurrency } from "@/shared/lib/utils";
-import { CURRENCY_SYMBOL, type Currency } from "@/shared/lib/currency";
+import { formatMoney, formatMoneyParts, type Currency } from "@/shared/lib/money";
+import type { Locale } from "@/shared/lib/i18n/config";
 import type { HeroData, SummaryMode } from "@/features/dashboard/lib";
 
 interface HeroSectionProps {
   hero: Record<SummaryMode, HeroData>;
   currency: Currency;
+  locale: Locale;
 }
 
-export function HeroSection({ hero, currency }: HeroSectionProps) {
-  const symbol = CURRENCY_SYMBOL[currency];
+export function HeroSection({ hero, currency, locale }: HeroSectionProps) {
+  // The headline amount styles its symbol apart from the digits, so it needs
+  // the parts rather than the formatted string — including which side the
+  // symbol goes on, which is after the number in Spanish.
+  const income = formatMoneyParts(hero.income.value, currency, locale);
 
   return (
     <div className="relative overflow-hidden rounded-3xl border border-primary/22 bg-gradient-to-br from-bg-hero-from via-bg-hero-via to-bg-hero-to p-6">
@@ -18,10 +22,15 @@ export function HeroSection({ hero, currency }: HeroSectionProps) {
         {hero.income.label}
       </p>
       <div className="relative mt-2 flex items-end gap-1.5">
-        <span className="font-display text-2xl font-medium text-text-primary">{symbol}</span>
+        {income.symbolFirst ? (
+          <span className="font-display text-2xl font-medium text-text-primary">{income.symbol}</span>
+        ) : null}
         <span className="font-display text-5xl font-extrabold tracking-tighter text-text-primary">
-          {formatCurrency(hero.income.value, currency)}
+          {income.number}
         </span>
+        {income.symbolFirst ? null : (
+          <span className="font-display text-2xl font-medium text-text-primary">{income.symbol}</span>
+        )}
       </div>
       <p className="relative mt-3 text-sm text-text-muted">{hero.income.sub}</p>
 
@@ -31,7 +40,7 @@ export function HeroSection({ hero, currency }: HeroSectionProps) {
             {hero.bills.label}
           </p>
           <p className="mt-1 font-display text-xl font-bold text-text-primary">
-            {symbol}{formatCurrency(hero.bills.value, currency)}
+            {formatMoney(hero.bills.value, currency, locale)}
           </p>
         </div>
         <div>
@@ -39,7 +48,7 @@ export function HeroSection({ hero, currency }: HeroSectionProps) {
             {hero.left.label}
           </p>
           <p className={`mt-1 font-display text-xl font-bold ${hero.left.colorClass}`}>
-            {symbol}{formatCurrency(hero.left.value, currency)}
+            {formatMoney(hero.left.value, currency, locale)}
           </p>
         </div>
       </div>
@@ -49,7 +58,7 @@ export function HeroSection({ hero, currency }: HeroSectionProps) {
           {hero.available.label}
         </p>
         <p className={`mt-1 font-display text-xl font-bold ${hero.available.colorClass}`}>
-          {symbol}{formatCurrency(hero.available.value, currency)}
+          {formatMoney(hero.available.value, currency, locale)}
         </p>
       </div>
     </div>

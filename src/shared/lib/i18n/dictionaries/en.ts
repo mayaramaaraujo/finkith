@@ -113,6 +113,10 @@ export const en = {
     confirmDelete: "Yes, delete my account",
     language: "Language",
     currency: "Currency",
+    currencyChangeTitle: "Change currency?",
+    currencyChangeBody: (from: string, to: string) =>
+      `Amounts already saved will not be converted — a bill of 100 ${from} will read as 100 ${to}. Only the symbol and formatting change.`,
+    currencyChangeConfirm: "Change currency",
     categories: "Categories",
     billCategories: "Bills",
     incomeCategories: "Income",

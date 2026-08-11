@@ -1,5 +1,5 @@
 import { createClient } from "./server";
-import { DEFAULT_CURRENCY, isCurrency, type Currency } from "@/shared/lib/currency";
+import { DEFAULT_CURRENCY, isCurrency, type Currency } from "@/shared/lib/money";
 
 export type CurrentGroup = {
   groupId: string;

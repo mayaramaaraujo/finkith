@@ -1,27 +1,55 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/shared/components/Button";
 import { Select } from "@/shared/components/Select";
+import { Sheet } from "@/shared/components/Sheet";
 import { updateGroupCurrency } from "@/features/groups/api/actions";
-import { CURRENCIES, CURRENCY_LABEL, type Currency } from "@/shared/lib/currency";
+import { CURRENCIES, currencyLabel, type Currency } from "@/shared/lib/money";
+import { useTranslation } from "@/shared/lib/i18n/context";
 
 interface CurrencySwitcherProps {
   currency: Currency;
 }
 
 export function CurrencySwitcher({ currency }: CurrencySwitcherProps) {
+  const { dict, locale } = useTranslation();
   const [isPending, startTransition] = useTransition();
+  // Nothing converts the amounts already stored, so switching silently changes
+  // what every number in the group means. Confirm before that happens.
+  const [pendingCurrency, setPendingCurrency] = useState<Currency | null>(null);
+
+  function confirm() {
+    if (!pendingCurrency) return;
+    startTransition(async () => {
+      await updateGroupCurrency(pendingCurrency);
+      setPendingCurrency(null);
+    });
+  }
 
   return (
-    <Select<Currency>
-      value={currency}
-      onChange={(next) =>
-        startTransition(async () => {
-          await updateGroupCurrency(next);
-        })
-      }
-      options={CURRENCIES.map((value) => ({ value, label: CURRENCY_LABEL[value] }))}
-      className={isPending ? "opacity-60" : ""}
-    />
+    <>
+      <Select<Currency>
+        value={currency}
+        onChange={(next) => next !== currency && setPendingCurrency(next)}
+        options={CURRENCIES.map((value) => ({ value, label: currencyLabel(value, locale) }))}
+        className={isPending ? "opacity-60" : ""}
+      />
+
+      <Sheet
+        open={pendingCurrency !== null}
+        onClose={() => setPendingCurrency(null)}
+        title={dict.settings.currencyChangeTitle}
+      >
+        <p className="text-sm text-text-subtle">
+          {dict.settings.currencyChangeBody(currency, pendingCurrency ?? currency)}
+        </p>
+        <Button fullWidth disabled={isPending} onClick={confirm} className="mt-5">
+          {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+          {dict.settings.currencyChangeConfirm}
+        </Button>
+      </Sheet>
+    </>
   );
 }

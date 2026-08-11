@@ -1,6 +1,6 @@
 import type { AvatarColorIndex } from "@/shared/components/Avatar";
-import { formatCurrency } from "@/shared/lib/utils";
-import { CURRENCY_SYMBOL, type Currency } from "@/shared/lib/currency";
+import { formatMoney, type Currency } from "@/shared/lib/money";
+import type { Locale } from "@/shared/lib/i18n/config";
 import type { GroupMember } from "@/features/groups/types";
 import type { IncomeEntry, DefaultIncomeCategory } from "@/features/income/types";
 import type { Bill, DefaultBillCategory } from "@/features/bills/types";
@@ -21,6 +21,7 @@ export function computeHero(
   activeMemberCount: number,
   dict: Dictionary,
   currency: Currency,
+  locale: Locale,
 ): Record<SummaryMode, HeroData> {
   const incomeTotal = entries.reduce((sum, e) => sum + e.amount, 0);
   const billsTotal = bills.reduce((sum, b) => sum + b.amount, 0);
@@ -30,7 +31,6 @@ export function computeHero(
   const leftPositive = left >= 0;
   const available = incomeTotal - billsPaid;
   const availablePositive = available >= 0;
-  const symbol = CURRENCY_SYMBOL[currency];
 
   return {
     income: {
@@ -44,8 +44,8 @@ export function computeHero(
       value: billsTotal,
       colorClass: "text-text-primary",
       sub: dict.home.billsPaidPending(
-        `${symbol}${formatCurrency(billsPaid, currency)}`,
-        `${symbol}${formatCurrency(billsPending, currency)}`,
+        formatMoney(billsPaid, currency, locale),
+        formatMoney(billsPending, currency, locale),
       ),
     },
     left: {

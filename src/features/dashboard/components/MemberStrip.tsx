@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Avatar } from "@/shared/components/Avatar";
-import { formatCurrency } from "@/shared/lib/utils";
-import { CURRENCY_SYMBOL, type Currency } from "@/shared/lib/currency";
+import { formatMoney, type Currency } from "@/shared/lib/money";
+import type { Locale } from "@/shared/lib/i18n/config";
 import type { MemberStripEntry } from "@/features/dashboard/lib";
 
 interface MemberStripProps {
@@ -10,9 +10,10 @@ interface MemberStripProps {
   byPersonLabel: string;
   addLabel: string;
   currency: Currency;
+  locale: Locale;
 }
 
-export function MemberStrip({ members, byPersonLabel, addLabel, currency }: MemberStripProps) {
+export function MemberStrip({ members, byPersonLabel, addLabel, currency, locale }: MemberStripProps) {
   return (
     <div>
       <p className="mb-3 mt-6 font-display text-base font-semibold text-text-primary">
@@ -27,7 +28,7 @@ export function MemberStrip({ members, byPersonLabel, addLabel, currency }: Memb
             <Avatar initials={member.name.charAt(0).toUpperCase()} colorIndex={member.colorIndex} size="sm" />
             <p className="mt-2.5 truncate text-xs text-text-muted">{member.name}</p>
             <p className="mt-0.5 font-display text-lg font-bold text-text-primary">
-              {CURRENCY_SYMBOL[currency]}{formatCurrency(member.amount, currency)}
+              {formatMoney(member.amount, currency, locale)}
             </p>
           </div>
         ))}

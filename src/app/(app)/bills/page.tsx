@@ -46,13 +46,14 @@ export default async function BillsPage() {
 
   return (
     <div>
-      <BillsSummary summary={summary} dict={dict} currency={currentGroup.currency} />
+      <BillsSummary summary={summary} dict={dict} currency={currentGroup.currency} locale={locale} />
       <CategoryBreakdown
         title={dict.bills.byCategory(monthLabel(currentMonth, true, LOCALE_INTL_TAG[locale]))}
         rows={categoryBreakdown}
         emptyMessage={dict.bills.noPaidBillsThisMonth}
         categoryLabel={(category) => dict.categories.bill[category as DefaultBillCategory] ?? category}
         currency={currentGroup.currency}
+        locale={locale}
       />
       <BillsList bills={bills} currency={currentGroup.currency} categories={categories} />
     </div>
