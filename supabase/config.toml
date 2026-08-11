@@ -248,10 +248,15 @@ admin_email = "noreply@finkith.com"
 sender_name = "Finkith"
 
 [auth.email.template.confirmation]
-# Plain text, not a template: Go templating is documented for template content
-# but not for subjects, so this one line stays in DEFAULT_LOCALE's language
-# while the body follows the recipient's `.Data.locale`.
-subject = "Confirm your Finkith account"
+# Branches on the recipient's language like the body does. GoTrue parses the
+# subject as an html/template and executes it against the same data map as the
+# body (internal/mailer/templatemailer/template.go), so `.Data.locale` resolves
+# here too — it just isn't mentioned in the docs. Keep this in sync with the
+# branches in the template, and avoid apostrophes: html/template escapes them
+# to &#39; and the subject is rendered as a plain header, not as HTML.
+#
+# TOML literal string (single quotes) so the inner "" need no escaping.
+subject = '{{ if eq .Data.locale "pt-BR" }}Confirme sua conta Finkith{{ else if eq .Data.locale "es-ES" }}Confirma tu cuenta de Finkith{{ else }}Confirm your Finkith account{{ end }}'
 content_path = "./supabase/templates/confirmation.html"
 
 # Uncomment to customize email template

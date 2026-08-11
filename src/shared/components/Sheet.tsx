@@ -3,6 +3,7 @@
 import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useTranslation } from "@/shared/lib/i18n/context";
 
 const subscribeNoop = () => () => {};
 
@@ -24,6 +25,7 @@ interface SheetProps {
 
 export function Sheet({ open, onClose, title, children }: SheetProps) {
   const mounted = useIsMounted();
+  const { dict } = useTranslation();
 
   useEffect(() => {
     if (!open) return;
@@ -62,7 +64,7 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={dict.common.close}
               className="flex size-8 items-center justify-center rounded-full bg-surface-3 text-text-icon"
             >
               <X className="size-4" />

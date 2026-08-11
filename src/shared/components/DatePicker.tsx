@@ -1,10 +1,34 @@
 "use client";
 
 import { forwardRef } from "react";
-import ReactDatePicker from "react-datepicker";
+import ReactDatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { enUS } from "date-fns/locale/en-US";
+import { es } from "date-fns/locale/es";
+import { ptBR } from "date-fns/locale/pt-BR";
 import { Calendar } from "lucide-react";
 import { Input } from "@/shared/components/Input";
+import type { Locale } from "@/shared/lib/i18n/config";
+import { useTranslation } from "@/shared/lib/i18n/context";
+
+// react-datepicker localizes its calendar through date-fns, and defaults to
+// English when nothing is registered — so month and weekday names ignored the
+// app's language entirely. Registration is global and idempotent, so doing it
+// at module scope covers every instance.
+registerLocale("en", enUS);
+registerLocale("pt-BR", ptBR);
+registerLocale("es-ES", es);
+
+/**
+ * Field order differs by locale even though every locale here uses the same
+ * separator: en-US is month-first, es-ES and pt-BR are day-first. The stored
+ * value is always ISO — this only affects what the read-only input displays.
+ */
+const DATE_FORMAT: Record<Locale, string> = {
+  en: "MM/dd/yyyy",
+  "pt-BR": "dd/MM/yyyy",
+  "es-ES": "dd/MM/yyyy",
+};
 
 interface DatePickerProps {
   value: string;
@@ -32,12 +56,15 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(function
   { value, onChange, onBlur, invalid = false, placeholder },
   ref,
 ) {
+  const { locale } = useTranslation();
+
   return (
     <ReactDatePicker
       selected={parseISODate(value)}
       onChange={(date: Date | null) => date && onChange(toISODate(date))}
       onBlur={onBlur}
-      dateFormat="dd/MM/yyyy"
+      locale={locale}
+      dateFormat={DATE_FORMAT[locale]}
       placeholderText={placeholder}
       showPopperArrow={false}
       withPortal

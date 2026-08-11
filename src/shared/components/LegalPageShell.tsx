@@ -19,7 +19,7 @@ export function LegalPageShell({ title, lastUpdated, intro, sections, locale }: 
         className="inline-flex w-fit items-center gap-1.5 text-sm text-text-subtle transition-colors hover:text-text-primary"
       >
         <ArrowLeft className="size-4" />
-        {getDictionary(locale).legal.back}
+        {getDictionary(locale).common.back}
       </Link>
 
       <h1 className="mt-8 font-display text-3xl font-bold tracking-tight text-text-primary">{title}</h1>

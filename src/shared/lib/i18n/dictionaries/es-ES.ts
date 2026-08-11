@@ -184,8 +184,9 @@ export const esES: Dictionary = {
     joinDescription: "Te añadiremos como miembro y podrás empezar a registrar ingresos y facturas con el grupo.",
     joinGroup: "Unirse al grupo",
   },
-  legal: {
+  common: {
     back: "Volver",
+    close: "Cerrar",
   },
   categories: {
     bill: {
