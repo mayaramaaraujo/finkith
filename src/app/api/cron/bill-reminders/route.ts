@@ -1,7 +1,8 @@
 import webpush from "web-push";
 import { getAdminClient } from "@/shared/lib/supabase/admin";
 import { BILL_COLUMNS, mapBillRow, getBillDueInfo } from "@/features/bills/lib";
-import { ptBR } from "@/shared/lib/i18n/dictionaries/pt-BR";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/shared/lib/i18n/config";
+import { getDictionary } from "@/shared/lib/i18n/dictionaries";
 
 webpush.setVapidDetails(
   process.env.VAPID_SUBJECT!,
@@ -9,13 +10,38 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY!,
 );
 
-function reminderCopy(billName: string, status: "due-soon" | "overdue") {
-  const label = status === "overdue" ? ptBR.bills.overdue : ptBR.bills.dueSoon;
+function reminderCopy(billName: string, status: "due-soon" | "overdue", locale: Locale) {
+  const dict = getDictionary(locale);
+  const label = status === "overdue" ? dict.bills.overdue : dict.bills.dueSoon;
   const body =
     status === "overdue"
-      ? `A conta "${billName}" está atrasada.`
-      : `A conta "${billName}" vence em breve.`;
+      ? dict.notifications.reminderOverdueBody(billName)
+      : dict.notifications.reminderDueSoonBody(billName);
   return { title: `${billName} · ${label}`, body };
+}
+
+/**
+ * The recipient's language. There's no request here, so the locale cookie the
+ * app renders from is out of reach — user_metadata is the only per-user copy,
+ * written at signup and refreshed whenever the language switcher runs. Users
+ * who predate that, or whose metadata holds something unrecognized, fall back
+ * to DEFAULT_LOCALE. Cached per run so a user with several due bills is only
+ * looked up once.
+ */
+async function getUserLocale(
+  supabase: ReturnType<typeof getAdminClient>,
+  userId: string,
+  cache: Map<string, Locale>,
+): Promise<Locale> {
+  const cached = cache.get(userId);
+  if (cached) return cached;
+
+  const { data } = await supabase.auth.admin.getUserById(userId);
+  const value = data.user?.user_metadata?.locale;
+  const locale = typeof value === "string" && isLocale(value) ? value : DEFAULT_LOCALE;
+
+  cache.set(userId, locale);
+  return locale;
 }
 
 export async function GET(request: Request) {
@@ -38,6 +64,7 @@ export async function GET(request: Request) {
   }
 
   const bills = (billRows ?? []).map(mapBillRow);
+  const localeCache = new Map<string, Locale>();
   let sent = 0;
   let skipped = 0;
 
@@ -79,7 +106,8 @@ export async function GET(request: Request) {
         .select("id, endpoint, p256dh, auth")
         .eq("user_id", userId);
 
-      const { title, body } = reminderCopy(bill.name, dueInfo.status);
+      const locale = await getUserLocale(supabase, userId, localeCache);
+      const { title, body } = reminderCopy(bill.name, dueInfo.status, locale);
 
       for (const subscription of subscriptions ?? []) {
         try {

@@ -128,6 +128,8 @@ export const ptBR: Dictionary = {
     title: "Notificações push",
     description: "Seja avisado quando uma conta estiver prestes a vencer ou atrasada.",
     permissionDenied: "As notificações estão bloqueadas nas configurações do seu navegador.",
+    reminderOverdueBody: (billName: string) => `A conta "${billName}" está atrasada.`,
+    reminderDueSoonBody: (billName: string) => `A conta "${billName}" vence em breve.`,
   },
   auth: {
     appTitle: "Finkith",

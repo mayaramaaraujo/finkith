@@ -128,6 +128,8 @@ export const esES: Dictionary = {
     title: "Notificaciones push",
     description: "Recibe un aviso cuando una factura esté a punto de vencer o esté vencida.",
     permissionDenied: "Las notificaciones están bloqueadas en los ajustes de tu navegador.",
+    reminderOverdueBody: (billName: string) => `La factura "${billName}" está vencida.`,
+    reminderDueSoonBody: (billName: string) => `La factura "${billName}" vence pronto.`,
   },
   auth: {
     appTitle: "Finkith",

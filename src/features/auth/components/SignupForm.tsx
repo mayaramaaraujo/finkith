@@ -39,9 +39,11 @@ export function SignupForm({ next }: SignupFormProps) {
       email: values.email,
       password: values.password,
       options: {
-        // `locale` lands in user_metadata, which is the only thing the
-        // confirmation email template can read about the recipient — it picks
-        // the language off `.Data.locale`. See supabase/templates/.
+        // `locale` lands in user_metadata, the per-user language copy that
+        // anything running without a request reads: the confirmation email
+        // template picks it off `.Data.locale` (see supabase/templates/), and
+        // the bill-reminder cron looks the dictionary up with it. The language
+        // switcher keeps it current from here on.
         data: { full_name: values.name, locale },
         emailRedirectTo: redirectTo.toString(),
       },

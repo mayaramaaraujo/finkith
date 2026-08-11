@@ -126,6 +126,8 @@ export const en = {
     title: "Push notifications",
     description: "Get notified when a bill is due soon or overdue.",
     permissionDenied: "Notifications are blocked in your browser settings.",
+    reminderOverdueBody: (billName: string) => `The bill "${billName}" is overdue.`,
+    reminderDueSoonBody: (billName: string) => `The bill "${billName}" is due soon.`,
   },
   auth: {
     appTitle: "Finkith",
