@@ -50,7 +50,8 @@ function defaultValues(defaultMemberId: string, categories: Category[]): IncomeF
   return {
     memberId: defaultMemberId,
     category: categories[0]?.name ?? "",
-    amount: undefined,
+    // "" (not undefined) so `reset` actually clears the number input's DOM value
+    amount: "",
     entryDate: todayDate(),
     note: "",
   };

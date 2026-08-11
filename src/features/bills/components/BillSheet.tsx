@@ -30,7 +30,8 @@ type BillFormInput = z.input<ReturnType<typeof createBillSchema>>;
 function defaultValues(categories: Category[]): BillFormInput {
   return {
     name: "",
-    amount: undefined,
+    // "" (not undefined) so `reset` actually clears the number input's DOM value
+    amount: "",
     dueDay: new Date().getDate(),
     fixed: true,
     category: categories[0]?.name ?? "",
