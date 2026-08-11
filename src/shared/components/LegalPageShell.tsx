@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { LegalPageContent } from "@/app/privacy/content";
 import type { Locale } from "@/shared/lib/i18n/config";
+import { getDictionary } from "@/shared/lib/i18n/dictionaries";
 
 interface LegalPageShellProps extends LegalPageContent {
   locale: Locale;
@@ -18,7 +19,7 @@ export function LegalPageShell({ title, lastUpdated, intro, sections, locale }: 
         className="inline-flex w-fit items-center gap-1.5 text-sm text-text-subtle transition-colors hover:text-text-primary"
       >
         <ArrowLeft className="size-4" />
-        {locale === "pt-BR" ? "Voltar" : "Back"}
+        {getDictionary(locale).legal.back}
       </Link>
 
       <h1 className="mt-8 font-display text-3xl font-bold tracking-tight text-text-primary">{title}</h1>

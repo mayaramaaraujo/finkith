@@ -179,4 +179,86 @@ export const privacyContent: Record<Locale, LegalPageContent> = {
       },
     ],
   },
+  "es-ES": {
+    title: "Política de Privacidad",
+    lastUpdated: "Última actualización: 6 de agosto de 2026",
+    intro:
+      'Finkith ("nosotros", "nuestro") es una app que ayuda a grupos de personas — familias, parejas, compañeros de piso — a llevar el control de ingresos y facturas compartidos. Esta política explica qué datos personales recogemos, por qué, y qué derechos tienes sobre ellos. Se aplica tanto si estás en el Espacio Económico Europeo (protegido por el RGPD) como en Brasil (protegido por la LGPD) o en cualquier otro lugar.',
+    sections: [
+      {
+        heading: "1. Qué recogemos",
+        paragraphs: [
+          "Datos de la cuenta: tu dirección de correo electrónico, contraseña (almacenada cifrada, nunca en texto plano) y nombre visible.",
+          "Datos financieros que introduces: registros de ingresos, facturas, categorías, importes, fechas y notas.",
+          "Datos del grupo: nombre del grupo, códigos de invitación y tu pertenencia/rol (administrador o miembro) en cada grupo.",
+          "Preferencias: tus ajustes de idioma y moneda.",
+          "Datos de notificaciones push: el endpoint de suscripción push de tu navegador, solo si activas las notificaciones.",
+          "Nunca recogemos tus credenciales bancarias ni números de tarjeta, y no nos conectamos a tu banco — Finkith solo guarda las cifras que tú mismo introduces.",
+        ],
+      },
+      {
+        heading: "2. Por qué los usamos",
+        paragraphs: [
+          "Para prestar el servicio para el que te has registrado: crear tu cuenta, guardar tus registros y mantener tus grupos sincronizados.",
+          "Para enviar correos relacionados con la cuenta, como la confirmación de tu dirección de correo o el restablecimiento de tu contraseña.",
+          "Para enviar notificaciones push sobre facturas que vencen pronto o están vencidas, solo si has concedido permiso de notificaciones — puedes revocarlo en cualquier momento en tu navegador o en Ajustes.",
+          "Para mantener el servicio seguro y prevenir abusos.",
+        ],
+      },
+      {
+        heading: "3. Con quién los compartimos",
+        paragraphs: [
+          "Usamos un número reducido de proveedores de infraestructura para hacer funcionar Finkith: Supabase (alojamiento de base de datos y autenticación) y Resend (envío de correo transaccional). Si activas las notificaciones push, el envío pasa también por el servicio de push de tu propio navegador (por ejemplo, Google, Mozilla o Apple).",
+          "No vendemos tus datos ni los compartimos con anunciantes.",
+        ],
+      },
+      {
+        heading: "4. Dónde se alojan tus datos",
+        paragraphs: [
+          "Tus datos son tratados y almacenados por los proveedores de infraestructura indicados arriba, que pueden estar ubicados fuera de tu país, incluso fuera del EEE o de Brasil. Cuando eso ocurre, nos apoyamos en las garantías que esos proveedores ofrecen para las transferencias internacionales.",
+        ],
+      },
+      {
+        heading: "5. Cuánto tiempo los conservamos",
+        paragraphs: [
+          "Conservamos tus datos mientras exista tu cuenta. Puedes eliminar tu cuenta en cualquier momento desde Ajustes — esto borra permanentemente tu perfil, te saca de todos los grupos a los que perteneces y elimina los registros de los que eres propietario. La eliminación es inmediata y no se puede deshacer.",
+        ],
+      },
+      {
+        heading: "6. Tus derechos",
+        paragraphs: [
+          "Conforme al RGPD y a la LGPD, tienes derecho a acceder a los datos personales que tenemos sobre ti, rectificar datos inexactos, solicitar su supresión, recibir una copia de tus datos y oponerte o limitar determinados tratamientos. También puedes retirar tu consentimiento (por ejemplo, para las notificaciones push) en cualquier momento.",
+          `Para ejercer cualquiera de estos derechos, elimina tu cuenta directamente en Ajustes o escríbenos a ${CONTACT_EMAIL}. Si estás en el EEE, también puedes presentar una reclamación ante tu autoridad de protección de datos (en España, la AEPD); si estás en Brasil, puedes contactar con la ANPD.`,
+        ],
+      },
+      {
+        heading: "7. Datos compartidos dentro de tu grupo",
+        paragraphs: [
+          "Finkith está construido en torno a grupos compartidos. Si te unes a un grupo, los demás miembros pueden ver los ingresos y las facturas registrados en él, incluidos los que añadas tú. Elige con cuidado a quién invitas.",
+        ],
+      },
+      {
+        heading: "8. Menores",
+        paragraphs: [
+          "Finkith no está dirigido a menores y no recogemos conscientemente datos de personas menores de 16 años (en el EEE) o de 13 años (en Brasil y otras regiones con un límite inferior).",
+        ],
+      },
+      {
+        heading: "9. Cookies",
+        paragraphs: [
+          "Solo usamos cookies estrictamente necesarias: una para recordar tu preferencia de idioma y las cookies de autenticación que Supabase utiliza para mantener tu sesión iniciada. Actualmente no usamos cookies publicitarias ni analíticas.",
+        ],
+      },
+      {
+        heading: "10. Cambios en esta política",
+        paragraphs: [
+          "Podemos actualizar esta política a medida que el servicio evolucione. Actualizaremos la fecha en la parte superior de esta página y te avisaremos dentro de la app si el cambio es sustancial.",
+        ],
+      },
+      {
+        heading: "11. Contacto",
+        paragraphs: [`Dudas o solicitudes sobre tus datos: ${CONTACT_EMAIL}`],
+      },
+    ],
+  },
 };

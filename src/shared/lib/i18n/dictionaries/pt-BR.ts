@@ -182,6 +182,9 @@ export const ptBR: Dictionary = {
     joinDescription: "Você será adicionado como membro e poderá começar a registrar renda e contas junto com o grupo.",
     joinGroup: "Entrar no grupo",
   },
+  legal: {
+    back: "Voltar",
+  },
   categories: {
     bill: {
       Housing: "Moradia",

@@ -150,4 +150,77 @@ export const termsContent: Record<Locale, LegalPageContent> = {
       },
     ],
   },
+  "es-ES": {
+    title: "Términos de Servicio",
+    lastUpdated: "Última actualización: 6 de agosto de 2026",
+    intro:
+      "Estos Términos regulan tu uso de Finkith. Al crear una cuenta o usar la app, los aceptas. Si no estás de acuerdo, por favor no uses el servicio.",
+    sections: [
+      {
+        heading: "1. Qué es Finkith",
+        paragraphs: [
+          "Finkith es una herramienta para llevar el control de ingresos y facturas compartidos dentro de un hogar o grupo. No es un banco, no se conecta a tus cuentas bancarias, no mueve ni custodia dinero, y no es una entidad financiera regulada. Nada de lo que hay en la app constituye asesoramiento financiero, fiscal ni jurídico.",
+        ],
+      },
+      {
+        heading: "2. Cuentas y grupos",
+        paragraphs: [
+          "Necesitas una cuenta para usar Finkith, y eres responsable de mantener seguras tus credenciales de acceso y de toda la actividad realizada en tu cuenta.",
+          "Los grupos son espacios compartidos: cuando creas un grupo o te unes a uno, los demás miembros pueden ver los datos de ingresos y facturas registrados en él. Los administradores del grupo pueden gestionar a los miembros y expulsar a personas del grupo.",
+        ],
+      },
+      {
+        heading: "3. Uso aceptable",
+        paragraphs: [
+          "No uses Finkith para almacenar o compartir contenido ilícito, hacerte pasar por otra persona, intentar acceder a cuentas o grupos de otros usuarios sin autorización, o interferir en el funcionamiento normal del servicio.",
+        ],
+      },
+      {
+        heading: "4. Precios",
+        paragraphs: [
+          "Finkith es gratuito por ahora. Puede que introduzcamos planes o funciones de pago en el futuro; si lo hacemos, avisaremos con antelación a los usuarios existentes antes de cualquier cambio que les afecte.",
+        ],
+      },
+      {
+        heading: "5. Tus datos",
+        paragraphs: [
+          "Los datos que introduces en Finkith son tuyos. Consulta nuestra Política de Privacidad para saber cómo los tratamos. Puedes eliminar tus datos en cualquier momento desde Ajustes.",
+        ],
+      },
+      {
+        heading: "6. Disponibilidad",
+        paragraphs: [
+          'Finkith se ofrece "tal cual" y "según disponibilidad". No garantizamos que el servicio sea ininterrumpido ni esté libre de errores, y podemos modificar o discontinuar funciones.',
+        ],
+      },
+      {
+        heading: "7. Limitación de responsabilidad",
+        paragraphs: [
+          "En la máxima medida permitida por la ley, Finkith y su operador no son responsables de daños indirectos, incidentales o consecuentes derivados del uso del servicio, incluidas las decisiones tomadas a partir de datos introducidos por ti o por otros miembros del grupo. Esto no limita ninguna responsabilidad que no pueda excluirse conforme a la normativa de protección al consumidor aplicable de la UE o de Brasil (CDC).",
+        ],
+      },
+      {
+        heading: "8. Finalización",
+        paragraphs: [
+          "Puedes dejar de usar Finkith y eliminar tu cuenta en cualquier momento. Podemos suspender o cancelar cuentas que incumplan estos Términos.",
+        ],
+      },
+      {
+        heading: "9. Legislación aplicable",
+        paragraphs: [
+          "Estos Términos se rigen por las leyes de Brasil, sin perjuicio de los derechos imperativos de protección al consumidor que te correspondan conforme a la legislación de tu país de residencia si te encuentras en la UE/EEE.",
+        ],
+      },
+      {
+        heading: "10. Cambios en estos Términos",
+        paragraphs: [
+          "Podemos actualizar estos Términos a medida que el servicio evolucione. Seguir usando Finkith tras un cambio implica que aceptas los Términos actualizados.",
+        ],
+      },
+      {
+        heading: "11. Contacto",
+        paragraphs: [`Dudas sobre estos Términos: ${CONTACT_EMAIL}`],
+      },
+    ],
+  },
 };

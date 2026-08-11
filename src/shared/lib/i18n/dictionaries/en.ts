@@ -180,6 +180,9 @@ export const en = {
     joinDescription: "You'll be added as a member and can start logging income and bills together.",
     joinGroup: "Join group",
   },
+  legal: {
+    back: "Back",
+  },
   categories: {
     bill: {
       Housing: "Housing",
