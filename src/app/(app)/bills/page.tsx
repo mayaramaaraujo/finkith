@@ -41,8 +41,8 @@ export default async function BillsPage() {
 
   const bills = (billRows ?? []).map(mapBillRow);
   const categories = (categoryRows ?? []).map(mapCategoryRow);
-  const summary = computeBillsSummary(bills);
-  const categoryBreakdown = computeCategoryBreakdown(bills, colorsByCategoryName(categories));
+  const summary = computeBillsSummary(bills, currentMonth);
+  const categoryBreakdown = computeCategoryBreakdown(bills, colorsByCategoryName(categories), currentMonth);
 
   return (
     <div>
@@ -55,7 +55,12 @@ export default async function BillsPage() {
         currency={currentGroup.currency}
         locale={locale}
       />
-      <BillsList bills={bills} currency={currentGroup.currency} categories={categories} />
+      <BillsList
+        bills={bills}
+        currency={currentGroup.currency}
+        categories={categories}
+        month={currentMonth}
+      />
     </div>
   );
 }

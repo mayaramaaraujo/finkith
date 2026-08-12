@@ -30,8 +30,6 @@ export const esES: Dictionary = {
     availableToday: "DISPONIBLE HOY",
     contributing: (count: number) => `${count} ${count === 1 ? "persona aporta" : "personas aportan"} este mes`,
     billsPaidPending: (paid: string, pending: string) => `${paid} pagado · ${pending} pendiente`,
-    onTrack: "Todo en orden este mes",
-    billsExceedIncome: "Las facturas superan los ingresos este mes",
     member: "Miembro",
     dueDayPaid: "pagada",
     dueDayPending: "pendiente",

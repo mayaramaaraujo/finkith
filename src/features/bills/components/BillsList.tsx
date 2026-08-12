@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Repeat } from "lucide-react";
 import { Chip, CHIP_ACCENT_BG_CLASSES, type ChipAccent } from "@/shared/components/Chip";
 import { formatMoney, type Currency } from "@/shared/lib/money";
-import { filterBills, getBillDueInfo, type BillFilter } from "@/features/bills/lib";
+import { filterBills, getBillDueInfo, isPaidInCycle, type BillFilter } from "@/features/bills/lib";
 import { type Bill, type DefaultBillCategory } from "@/features/bills/types";
 import { colorsByCategoryName } from "@/features/categories/lib";
 import type { Category } from "@/features/categories/types";
@@ -16,9 +16,10 @@ interface BillsListProps {
   bills: Bill[];
   currency: Currency;
   categories: Category[];
+  month: string;
 }
 
-export function BillsList({ bills, currency, categories }: BillsListProps) {
+export function BillsList({ bills, currency, categories, month }: BillsListProps) {
   const { dict, locale } = useTranslation();
   const [filter, setFilter] = useState<BillFilter>("all");
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
@@ -63,7 +64,7 @@ export function BillsList({ bills, currency, categories }: BillsListProps) {
               key={bill.id}
               className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-1 p-3.5"
             >
-              <PaidToggle bill={bill} />
+              <PaidToggle bill={bill} month={month} />
               <button
                 type="button"
                 onClick={() => setEditingBillId(bill.id)}
@@ -94,7 +95,7 @@ export function BillsList({ bills, currency, categories }: BillsListProps) {
                 </Chip>
               )}
               <span
-                className={`font-display text-sm font-bold ${dueInfo.isPaidThisCycle ? "text-positive" : "text-text-primary"}`}
+                className={`font-display text-sm font-bold ${isPaidInCycle(bill, month) ? "text-positive" : "text-text-primary"}`}
               >
                 {formatMoney(bill.amount, currency, locale)}
               </span>
@@ -108,6 +109,7 @@ export function BillsList({ bills, currency, categories }: BillsListProps) {
         bill={editingBill}
         currency={currency}
         categories={categories}
+        month={month}
         onClose={() => setEditingBillId(null)}
       />
     </div>

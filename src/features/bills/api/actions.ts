@@ -3,15 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/shared/lib/supabase/server";
 import { getCurrentGroup } from "@/shared/lib/supabase/get-current-group";
-import { billSchema, type BillValues } from "@/features/bills/types";
+import { billSchema, cycleMonthSchema, type BillValues } from "@/features/bills/types";
+import { paidAtFor } from "@/features/bills/lib";
 
 function revalidateBills() {
   revalidatePath("/bills");
   revalidatePath("/home");
 }
 
-export async function addBill(values: BillValues): Promise<{ error: string } | undefined> {
+/**
+ * `cycleMonth` is the month the user is looking at, not today's. It decides
+ * which month a non-repeating bill belongs to, and — through `paidAtFor` —
+ * which cycle ticking "paid" applies to.
+ */
+export async function addBill(
+  values: BillValues,
+  cycleMonth: string,
+): Promise<{ error: string } | undefined> {
   const parsed = billSchema.parse(values);
+  const month = cycleMonthSchema.parse(cycleMonth);
 
   const currentGroup = await getCurrentGroup();
   if (!currentGroup) {
@@ -27,8 +37,9 @@ export async function addBill(values: BillValues): Promise<{ error: string } | u
     due_day: parsed.dueDay,
     fixed: parsed.fixed,
     repeat_monthly: parsed.repeatMonthly,
+    cycle_month: month,
     paid: parsed.paid,
-    paid_at: parsed.paid ? new Date().toISOString() : null,
+    paid_at: parsed.paid ? paidAtFor(month) : null,
   });
 
   if (error) {
@@ -41,8 +52,10 @@ export async function addBill(values: BillValues): Promise<{ error: string } | u
 export async function updateBill(
   billId: string,
   values: BillValues,
+  cycleMonth: string,
 ): Promise<{ error: string } | undefined> {
   const parsed = billSchema.parse(values);
+  const month = cycleMonthSchema.parse(cycleMonth);
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -54,8 +67,9 @@ export async function updateBill(
       due_day: parsed.dueDay,
       fixed: parsed.fixed,
       repeat_monthly: parsed.repeatMonthly,
+      cycle_month: month,
       paid: parsed.paid,
-      paid_at: parsed.paid ? new Date().toISOString() : null,
+      paid_at: parsed.paid ? paidAtFor(month) : null,
     })
     .eq("id", billId);
 
@@ -77,11 +91,17 @@ export async function deleteBill(billId: string): Promise<{ error: string } | un
   revalidateBills();
 }
 
-export async function toggleBillPaid(billId: string, paid: boolean): Promise<void> {
+export async function toggleBillPaid(
+  billId: string,
+  paid: boolean,
+  cycleMonth: string,
+): Promise<void> {
+  const month = cycleMonthSchema.parse(cycleMonth);
+
   const supabase = await createClient();
   await supabase
     .from("bills")
-    .update({ paid, paid_at: paid ? new Date().toISOString() : null })
+    .update({ paid, paid_at: paid ? paidAtFor(month) : null })
     .eq("id", billId);
 
   revalidateBills();

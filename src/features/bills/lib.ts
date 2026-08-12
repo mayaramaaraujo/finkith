@@ -33,8 +33,44 @@ export interface BillDueInfo {
   isPaidThisCycle: boolean;
 }
 
-function isSameMonth(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+/** The `YYYY-MM` cycle a date falls in, read in the reader's own timezone. */
+export function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * Whether a bill counts as paid for `month` (`YYYY-MM`).
+ *
+ * `paid_at` is the only record of *when* a bill was paid, so a repeating bill
+ * counts for a cycle only when its `paid_at` falls inside that cycle — that's
+ * what makes "paid" reset every month without a scheduled job. A non-repeating
+ * bill belongs to exactly one month (`cycle_month`), so its `paid` flag stands
+ * on its own.
+ *
+ * Every screen that shows a paid/pending figure must read it from here: the
+ * raw `paid` column is true for a repeating bill paid in *any* past month.
+ */
+export function isPaidInCycle(
+  bill: Pick<Bill, "paid" | "paidAt" | "repeatMonthly">,
+  month: string,
+): boolean {
+  if (!bill.paid) return false;
+  if (!bill.repeatMonthly) return true;
+  return bill.paidAt != null && monthKey(new Date(bill.paidAt)) === month;
+}
+
+/**
+ * The `paid_at` to write when marking a bill paid for `month`. Writing `now()`
+ * unconditionally would file a bill ticked off while viewing an earlier month
+ * under the current one instead, and `isPaidInCycle` would read it back as
+ * unpaid for the month the user was actually looking at. Midday on the 15th
+ * keeps the instant inside `month` in every timezone the app is read in.
+ */
+export function paidAtFor(month: string, now: Date = new Date()): string {
+  if (month === monthKey(now)) return now.toISOString();
+
+  const [year, monthNum] = month.split("-").map(Number);
+  return new Date(year, monthNum - 1, 15, 12).toISOString();
 }
 
 function startOfDay(date: Date): Date {
@@ -55,9 +91,7 @@ export function getBillDueInfo(
 ): BillDueInfo {
   const todayStart = startOfDay(today);
 
-  const isPaidThisCycle = bill.repeatMonthly
-    ? bill.paid && bill.paidAt != null && isSameMonth(new Date(bill.paidAt), todayStart)
-    : bill.paid;
+  const isPaidThisCycle = isPaidInCycle(bill, monthKey(todayStart));
 
   const daysInMonth = new Date(todayStart.getFullYear(), todayStart.getMonth() + 1, 0).getDate();
   const effectiveDay = Math.min(bill.dueDay, daysInMonth);
@@ -86,10 +120,10 @@ export interface BillsSummary {
   percentPaid: number;
 }
 
-export function computeBillsSummary(bills: Bill[]): BillsSummary {
+export function computeBillsSummary(bills: Bill[], month: string): BillsSummary {
   const total = bills.reduce((sum, b) => sum + b.amount, 0);
   const paidTotal = bills
-    .filter((b) => getBillDueInfo(b).isPaidThisCycle)
+    .filter((b) => isPaidInCycle(b, month))
     .reduce((sum, b) => sum + b.amount, 0);
   const pendingTotal = total - paidTotal;
   const percentPaid = total === 0 ? 0 : Math.round((paidTotal / total) * 100);
@@ -97,12 +131,13 @@ export function computeBillsSummary(bills: Bill[]): BillsSummary {
   return { paidTotal, pendingTotal, percentPaid };
 }
 
-/** Paid bills for the current cycle, grouped by category, sorted descending. */
+/** Bills paid for `month`, grouped by category, sorted descending. */
 export function computeCategoryBreakdown(
   bills: Bill[],
   colorsByCategory: Record<string, string>,
+  month: string,
 ): CategoryBreakdownRow[] {
-  const paidBills = bills.filter((b) => getBillDueInfo(b).isPaidThisCycle);
+  const paidBills = bills.filter((b) => isPaidInCycle(b, month));
   const total = paidBills.reduce((sum, b) => sum + b.amount, 0);
 
   const totalsByCategory = new Map<string, number>();

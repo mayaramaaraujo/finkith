@@ -30,8 +30,6 @@ export const ptBR: Dictionary = {
     availableToday: "SALDO DISPONÍVEL HOJE",
     contributing: (count: number) => `${count} ${count === 1 ? "pessoa" : "pessoas"} contribuindo este mês`,
     billsPaidPending: (paid: string, pending: string) => `${paid} pago · ${pending} pendente`,
-    onTrack: "Tudo certo para este mês",
-    billsExceedIncome: "As contas superam a renda este mês",
     member: "Membro",
     dueDayPaid: "pago",
     dueDayPending: "pendente",

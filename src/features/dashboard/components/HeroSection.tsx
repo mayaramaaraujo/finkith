@@ -1,9 +1,9 @@
 import { formatMoney, formatMoneyParts, type Currency } from "@/shared/lib/money";
 import type { Locale } from "@/shared/lib/i18n/config";
-import type { HeroData, SummaryMode } from "@/features/dashboard/lib";
+import type { Hero } from "@/features/dashboard/lib";
 
 interface HeroSectionProps {
-  hero: Record<SummaryMode, HeroData>;
+  hero: Hero;
   currency: Currency;
   locale: Locale;
 }

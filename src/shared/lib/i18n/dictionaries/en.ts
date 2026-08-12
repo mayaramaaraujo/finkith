@@ -28,8 +28,6 @@ export const en = {
     availableToday: "AVAILABLE TODAY",
     contributing: (count: number) => `${count} ${count === 1 ? "person" : "people"} contributing this month`,
     billsPaidPending: (paid: string, pending: string) => `${paid} paid · ${pending} pending`,
-    onTrack: "On track for this month",
-    billsExceedIncome: "Bills exceed income this month",
     member: "Member",
     dueDayPaid: "paid",
     dueDayPending: "pending",

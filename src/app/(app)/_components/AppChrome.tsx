@@ -226,6 +226,7 @@ export function AppChrome({
         onClose={closeSheet}
         currency={currency}
         categories={categoriesByType(categories, "bill")}
+        month={selectedMonth}
       />
     </div>
   );

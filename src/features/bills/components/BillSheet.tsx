@@ -13,6 +13,7 @@ import { Chip } from "@/shared/components/Chip";
 import { Switch } from "@/shared/components/Switch";
 import { addBill, updateBill, deleteBill } from "@/features/bills/api/actions";
 import { createBillFormSchema, type BillValues, type Bill, type DefaultBillCategory } from "@/features/bills/types";
+import { isPaidInCycle } from "@/features/bills/lib";
 import type { Category } from "@/features/categories/types";
 import { useTranslation } from "@/shared/lib/i18n/context";
 import { formatAmountForInput, formatMoneyParts, type Currency } from "@/shared/lib/money";
@@ -24,6 +25,8 @@ interface BillSheetProps {
   bill?: Bill;
   currency: Currency;
   categories: Category[];
+  /** The `YYYY-MM` being viewed — the cycle this bill is added to or paid for. */
+  month: string;
 }
 
 type BillFormInput = z.input<ReturnType<typeof createBillFormSchema>>;
@@ -41,7 +44,7 @@ function defaultValues(categories: Category[]): BillFormInput {
   };
 }
 
-function billToValues(bill: Bill, locale: Locale): BillFormInput {
+function billToValues(bill: Bill, locale: Locale, month: string): BillFormInput {
   return {
     name: bill.name,
     amount: formatAmountForInput(bill.amount, locale),
@@ -49,11 +52,13 @@ function billToValues(bill: Bill, locale: Locale): BillFormInput {
     fixed: bill.fixed,
     category: bill.category as BillValues["category"],
     repeatMonthly: bill.repeatMonthly,
-    paid: bill.paid,
+    // The switch reflects the month on screen, not whether the bill was ever
+    // paid — a repeating bill paid in June is unpaid when viewing July.
+    paid: isPaidInCycle(bill, month),
   };
 }
 
-export function BillSheet({ open, onClose, bill, currency, categories }: BillSheetProps) {
+export function BillSheet({ open, onClose, bill, currency, categories, month }: BillSheetProps) {
   const { dict, locale } = useTranslation();
   const billSchema = useMemo(() => createBillFormSchema(dict, locale), [dict, locale]);
   const { symbol, symbolFirst } = formatMoneyParts(0, currency, locale);
@@ -66,15 +71,15 @@ export function BillSheet({ open, onClose, bill, currency, categories }: BillShe
     formState: { errors, isSubmitting },
   } = useForm<BillFormInput, unknown, BillValues>({
     resolver: zodResolver(billSchema),
-    defaultValues: bill ? billToValues(bill, locale) : defaultValues(categories),
+    defaultValues: bill ? billToValues(bill, locale, month) : defaultValues(categories),
   });
 
   useEffect(() => {
-    if (open) reset(bill ? billToValues(bill, locale) : defaultValues(categories));
-  }, [open, bill, categories, locale, reset]);
+    if (open) reset(bill ? billToValues(bill, locale, month) : defaultValues(categories));
+  }, [open, bill, categories, locale, month, reset]);
 
   async function onSubmit(values: BillValues) {
-    const result = bill ? await updateBill(bill.id, values) : await addBill(values);
+    const result = bill ? await updateBill(bill.id, values, month) : await addBill(values, month);
     if (result?.error) {
       setError("root", { message: result.error });
       return;

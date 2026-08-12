@@ -1,32 +1,40 @@
 import type { AvatarColorIndex } from "@/shared/components/Avatar";
-import { formatMoney, type Currency } from "@/shared/lib/money";
-import type { Locale } from "@/shared/lib/i18n/config";
 import type { GroupMember } from "@/features/groups/types";
 import type { IncomeEntry, DefaultIncomeCategory } from "@/features/income/types";
 import type { Bill, DefaultBillCategory } from "@/features/bills/types";
+import { isPaidInCycle } from "@/features/bills/lib";
 import type { Dictionary } from "@/shared/lib/i18n/dictionaries";
 
-export type SummaryMode = "income" | "bills" | "left" | "available";
-
-export interface HeroData {
+/** A figure whose sign matters, so its color carries meaning. */
+export interface HeroFigure {
   label: string;
   value: number;
   colorClass: string;
-  sub: string;
+}
+
+/**
+ * Exactly what the hero card renders — see `HeroSection`. Income leads with a
+ * contributor line under it; the two signed figures colour themselves.
+ */
+export interface Hero {
+  income: { label: string; value: number; sub: string };
+  bills: { label: string; value: number };
+  left: HeroFigure;
+  available: HeroFigure;
 }
 
 export function computeHero(
   entries: IncomeEntry[],
   bills: Bill[],
+  month: string,
   activeMemberCount: number,
   dict: Dictionary,
-  currency: Currency,
-  locale: Locale,
-): Record<SummaryMode, HeroData> {
+): Hero {
   const incomeTotal = entries.reduce((sum, e) => sum + e.amount, 0);
   const billsTotal = bills.reduce((sum, b) => sum + b.amount, 0);
-  const billsPaid = bills.filter((b) => b.paid).reduce((sum, b) => sum + b.amount, 0);
-  const billsPending = billsTotal - billsPaid;
+  // Not `b.paid`: that flag stays true for a repeating bill paid in any past
+  // month, which would overstate "available today" every following month.
+  const billsPaid = bills.filter((b) => isPaidInCycle(b, month)).reduce((sum, b) => sum + b.amount, 0);
   const left = incomeTotal - billsTotal;
   const leftPositive = left >= 0;
   const available = incomeTotal - billsPaid;
@@ -36,29 +44,21 @@ export function computeHero(
     income: {
       label: dict.home.combinedIncome,
       value: incomeTotal,
-      colorClass: "text-text-primary",
       sub: dict.home.contributing(activeMemberCount),
     },
     bills: {
       label: dict.home.totalBills,
       value: billsTotal,
-      colorClass: "text-text-primary",
-      sub: dict.home.billsPaidPending(
-        formatMoney(billsPaid, currency, locale),
-        formatMoney(billsPending, currency, locale),
-      ),
     },
     left: {
       label: dict.home.projectedAfterBills,
       value: Math.abs(left),
       colorClass: leftPositive ? "text-positive" : "text-danger",
-      sub: leftPositive ? dict.home.onTrack : dict.home.billsExceedIncome,
     },
     available: {
       label: dict.home.availableToday,
       value: Math.abs(available),
       colorClass: availablePositive ? "text-positive" : "text-danger",
-      sub: availablePositive ? dict.home.onTrack : dict.home.billsExceedIncome,
     },
   };
 }
@@ -131,7 +131,7 @@ export function buildIncomeActivity(
 export function buildBillActivity(bills: Bill[], month: string, dict: Dictionary): ActivityItem[] {
   return bills.map((bill) => {
     const category = dict.categories.bill[bill.category as DefaultBillCategory] ?? bill.category;
-    const status = bill.paid ? dict.home.dueDayPaid : dict.home.dueDayPending;
+    const status = isPaidInCycle(bill, month) ? dict.home.dueDayPaid : dict.home.dueDayPending;
     const sub = bill.repeatMonthly
       ? `${category} · ${dict.home.dueDayLabel(bill.dueDay)} · ${status}`
       : `${category} · ${status}`;
@@ -141,7 +141,7 @@ export function buildBillActivity(bills: Bill[], month: string, dict: Dictionary
       title: bill.name,
       sub,
       amount: bill.amount,
-      amountColorClass: bill.paid ? "text-text-subtle" : "text-warning",
+      amountColorClass: isPaidInCycle(bill, month) ? "text-text-subtle" : "text-warning",
       date: `${month}-${String(bill.dueDay).padStart(2, "0")}`,
     };
   });

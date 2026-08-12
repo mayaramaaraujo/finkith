@@ -65,4 +65,10 @@ export const billSchema = z.object({
   amount: z.number().positive(),
 });
 
+/**
+ * A `YYYY-MM` cycle, matching the `bills_cycle_month_format` check constraint.
+ * Not part of the form — it comes from whichever month the user is viewing.
+ */
+export const cycleMonthSchema = z.string().regex(/^\d{4}-\d{2}$/);
+
 export type BillValues = z.infer<typeof billSchema>;

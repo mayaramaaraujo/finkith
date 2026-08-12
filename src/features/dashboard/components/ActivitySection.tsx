@@ -23,6 +23,7 @@ interface ActivitySectionProps {
   currentMemberId: string;
   currency: Currency;
   categories: Category[];
+  month: string;
 }
 
 export function ActivitySection({
@@ -34,6 +35,7 @@ export function ActivitySection({
   currentMemberId,
   currency,
   categories,
+  month,
 }: ActivitySectionProps) {
   const { dict, locale } = useTranslation();
   const [filter, setFilter] = useState<ActivityFilter>("all");
@@ -115,6 +117,7 @@ export function ActivitySection({
         bill={editingBill}
         currency={currency}
         categories={categoriesByType(categories, "bill")}
+        month={month}
         onClose={() => setEditingBillId(null)}
       />
     </div>
