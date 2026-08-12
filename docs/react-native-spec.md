@@ -1,312 +1,506 @@
-# Finkith — React Native Spec
+# Finkith — React Native App Specification
 
-Same product, same Supabase backend, new client. This is a build spec for a React Native app that
-talks to the **same Supabase project** as the Next.js app (same tables, same RLS, same auth users) —
-not a rewrite of the backend. You'll be building the client yourself; this doc is the reference, not
-generated code.
+**Audience:** the developer building the native app.
+**Source of truth for behaviour:** the existing Next.js web app in this repo (`src/`) and the Supabase migrations in `supabase/migrations/`.
+**Scope:** a full rewrite of the client as a React Native app. **The backend does not change shape** — same Supabase project, same tables, same RLS policies, same RPCs. The one exception is push notifications (see §9), which must move off Web Push.
 
-## 0. Ground rules
+---
 
-- **One Supabase backend for both apps.** Don't fork the schema. If you add a mobile-only table
-  (push tokens — see §5), it lives in the same project via a new migration, additive only.
-- **Auth is shared.** A user who signed up on the web can log into the RN app with the same
-  email/password, land in the same group, see the same data. Supabase Auth already handles this;
-  no new auth backend needed.
-- **RLS already does the heavy lifting.** Every read/write goes through the existing
-  `is_active_group_member` / `is_group_admin` policies. The mobile client doesn't need its own
-  authorization logic beyond "call the RPC / query the table the same way the web app does."
-- **No AI-generated code for this build** — this document is scope/reference only, written so you
-  can implement it by hand.
+## 1. What the product is
 
-## 1. Suggested stack
+Finkith is a **shared household budget tracker**. A user creates or joins exactly one **group**. Everyone in the group sees the same pooled data:
 
-| Concern | Choice | Why |
+- **Income entries** — attributed to a specific group member, categorised, dated.
+- **Bills** — group-level (not per-member), with a day-of-month due day, fixed/variable flag, optional monthly repeat, and a paid toggle.
+- A **home dashboard** summarising income vs. bills for a selected month.
+- A **history** view charting the last six months of income.
+- **Settings** — invite link, member list, currency, language, custom categories, push notification toggle, logout, delete account.
+
+Everything is scoped to one month at a time, chosen from a header month picker (current month plus the previous five).
+
+### 1.1 Non-obvious domain rules
+
+These are load-bearing and easy to get wrong. Read them before writing any feature code.
+
+| Rule | Detail |
+|---|---|
+| **One group per user** | `join_group_by_code` raises if the user already has an active membership. `getCurrentGroup` assumes at most one row. There is no group switcher. |
+| **Bill "paid" is per cycle** | For `repeat_monthly` bills, paid-ness is derived from whether `paid_at` falls in the month being viewed — there is no monthly reset job. `isPaidInCycle(bill, month)` in `src/features/bills/lib.ts` is the single source of truth; nothing may read the raw `paid` column to decide this. Port it verbatim. |
+| **Bill month scoping** | A bill appears in month `M` if `repeat_monthly = true` **or** `cycle_month = M`. `cycle_month` is a `YYYY-MM` text column defaulting to the creation month. |
+| **Due day is clamped** | `due_day` can be 31; the effective due date is `min(due_day, days_in_month)`. |
+| **Due status** | `overdue` if unpaid and past due; `due-soon` if unpaid and within 3 days; else `upcoming`. Paid-this-cycle always renders as `upcoming`. |
+| **Categories are per group, plain text on rows** | `bills.category` / `income_entries.category` store the category *name* as text with no FK, so deleting or renaming a category never rewrites history. The `categories` table only drives the picker and the colour. |
+| **Default category names are English literals** | Seeded as `Housing`, `Salary`, etc. The UI translates them by lookup (`dict.categories.bill[name] ?? name`); user-created categories fall through untranslated. Keep this behaviour. |
+| **Currency is per group** | `groups.currency`, constrained to `EUR` or `BRL`. |
+| **Language is per user** | Stored in `auth.users.user_metadata.locale`, written at signup and refreshed by the language switcher. The cron job reads it to localise reminders. |
+| **Money is parsed and formatted per locale** | `1.234,56` is valid input in pt-BR/es-ES and invalid in en. Port `src/shared/lib/money.ts` as-is; it has a test file (`money.test.ts`) — port that too. |
+| **Security boundary is RLS, not app code** | The web server actions do not re-check group ownership on update/delete; Postgres policies do. The RN client talks to the same policies with the same anon key, so this holds — **do not** add a service-role key to the app. |
+
+---
+
+## 2. Findings from the review of the existing web codebase
+
+The web app is largely AI-generated and mostly coherent. The review found eleven issues; **the defects and dead code have since been fixed on the web side**, so the RN app should port the corrected logic. They are listed here because each one is a trap worth knowing about while porting.
+
+### Fixed — port the corrected behaviour
+
+| # | Was | Now |
 |---|---|---|
-| Framework | Expo (React Native) + TypeScript | Managed workflow gets you push notifications, deep linking (invite links), and OTA updates without native build pain |
-| Navigation | React Navigation (bottom tabs + native stack) | Maps directly to the web app's 4 tabs + modals |
-| Backend client | `@supabase/supabase-js` with `expo-secure-store` as the auth storage adapter | Session persistence on-device; same query/RPC surface as the web app |
-| Forms | `react-hook-form` + `zod` (`@hookform/resolvers/zod`) | Matches the web app's convention (`AGENTS.md`); reuse schema shapes conceptually (can't literally import `src/features/*/types.ts` since dictionaries are web-only, but mirror the validation rules) |
-| Styling | NativeWind (Tailwind for RN) | Closest parity to the web app's Tailwind tokens in `globals.css` — otherwise hand-port the token scale into a theme object |
-| Server state | TanStack Query (`@tanstack/react-query`) | Web app uses Server Components for this; RN has no equivalent, so Query fills the "fetch + cache + revalidate" role that `revalidatePath` played server-side |
-| Push notifications | `expo-notifications` + Expo Push Tokens | Web app uses raw Web Push (VAPID); Expo apps use Expo's push service instead — different token shape, see §5 |
-| i18n | `i18next` + `react-i18next`, or port the existing `dictionaries/en.ts` / `pt-BR.ts` structure | Web app already has en/pt-BR dictionaries — reuse the same key structure so translations stay in sync |
+| 1 | `computeHero` counted "bills paid" from the raw `paid` column while the Bills screen used the per-cycle derivation, so a repeating bill paid in any past month inflated **Available today** every month after. `buildBillActivity` had the same mistake in its paid/pending label. | A single `isPaidInCycle(bill, month)` in `src/features/bills/lib.ts` is the only way any screen asks whether a bill is paid. Covered by `lib.test.ts`. |
+| 2 | `toggleBillPaid` always wrote `paid_at = now()`, so ticking a bill while viewing August marked it paid for the current month; the edit sheet's Paid switch showed the raw flag, so a bill paid in June looked paid in July. | The viewed month is threaded into the sheet, the toggle and the actions. `paidAtFor(month)` writes a timestamp inside that month (midday on the 15th for past months, so it stays in-month in every timezone), and the switch reflects `isPaidInCycle` for the month on screen. |
+| 3 | `addBill` never set `cycle_month`, so a one-off bill added while viewing another month landed in the current one and vanished from the screen that created it. | `addBill`/`updateBill` take the viewed month and set `cycle_month` explicitly, validated against the same `^\d{4}-\d{2}$` shape as the DB constraint. |
+| 4 | Invite-by-email was half-built: `group_members.invited_email`, `status = 'invited'`, an RLS insert policy existing only for it, `resend.ts`, the `resend` dependency, and unreachable "Invited" branches in the members list. | Removed. Migration `0011_drop_email_invites.sql` drops the column, the dead status value and the insert policy — no insert policy replaces it, since both membership paths are security-definer RPCs that bypass RLS. Invites are link-only. |
+| 5 | "Forgot password" was static text with no handler. | The dead affordance is gone. **The RN app should implement the real flow** (`auth.resetPasswordForEmail` + a deep-linked reset screen) rather than reinstate the text. |
+| 9 | The cron inserted into `bill_reminders_sent` before sending, so a failed send — or a user with no subscription yet — suppressed that reminder for the rest of the cycle. | The row is still claimed first (it is what enforces at-most-once), but released again when nothing was delivered, so the next daily run retries. |
 
-## 2. What's identical to the web app (reuse as-is)
+### Still open — decide before or during the port
 
-These Supabase tables and RPCs are consumed unchanged — no migration needed:
-
-- **Tables**: `groups`, `group_members`, `income_entries`, `bills`, `categories`
-- **RPCs**: `create_group_with_owner`, `join_group_by_code`, `get_group_by_invite_code`,
-  `delete_own_account`
-- **RLS policies**: all of them — a mobile client authenticated via the same Supabase Auth user
-  automatically gets the same row visibility.
-- **Business logic to port as plain TS functions** (currently in `src/features/*/lib.ts` on web —
-  reimplement the same math, don't reinvent it):
-  - Hero totals: income total, bills total, bills paid/pending, "projected after bills" (income −
-    all bills), "available today" (income − paid bills only)
-  - Per-member income totals (member strip)
-  - Merged, date-sorted activity feed (income entries + bills as one list)
-  - 6-month income trend + current-month category breakdown + earlier-months list
-  - Bill due-status derivation (`due-soon` / `overdue` / `paid` / `upcoming` from `due_day` +
-    `paid_at` + `repeat_monthly` + `cycle_month`)
-
-## 3. Non-goals for v1
-
-- No offline-first sync — always require network, matching the web app's server-driven model.
-- No native widgets/home-screen complications yet.
-- No feature the web app doesn't have (this is parity work, not a redesign).
-
-## 4. Milestones
-
-### M1 — Auth + Group shell
-Get a logged-in user into a group. No financial data yet.
-
-### M2 — Income & Bills core
-The two data types that drive every screen.
-
-### M3 — Home dashboard
-Composite screen built from M2 data.
-
-### M4 — History
-Read-only trends screen.
-
-### M5 — Settings & group management
-Currency, categories, members, invites, account deletion.
-
-### M6 — Push notifications
-Bill due/overdue reminders via Expo push.
-
-### M7 — Polish
-i18n, empty states, error states, pull-to-refresh.
+| # | Finding |
+|---|---|
+| 6 | The History screen charts **income only** while its copy reads generically. Label it explicitly in RN, or extend it to bills. |
+| 7 | `income_entries` RLS is `for all using (is_active_group_member(group_id))` — any member can edit or delete another member's income entry. Reasonable for a household, but confirm the intent; if it is not wanted, tighten the policy before launch. |
+| 8 | `delete_own_account()` deletes every group the user *created*, cascading away all its members' data, with no ownership handoff. The RN confirmation dialog must say so in plain language. |
+| 10 | No pagination anywhere. Fine at household scale; add `.range()` if a group ever grows. |
+| 11 | **Blocker for RN:** the reminder cron sends Web Push via VAPID, which native apps cannot receive. See §9. |
+| — | The Bills screen ignores the header month picker and always renders the current month, while Home and History honour it. Picking July leaves the Bills tab on August. Decide whether Bills becomes month-aware or the picker is hidden on that tab. |
 
 ---
 
-## 5. User stories
+## 3. Target stack
 
-Each story includes acceptance criteria and the Supabase call(s) it depends on. Story IDs are
-`M<milestone>.<n>`.
-
-### M1 — Auth + Group shell
-
-**M1.1 — Sign up**
-As a new user, I can create an account with name, email, password.
-- Fields: name (required), email (valid email), password (min 8 chars) — mirrors
-  `createSignupSchema` in `src/features/auth/types.ts`.
-- Calls `supabase.auth.signUp({ email, password, options: { data: { full_name: name } } })`.
-- On success, proceeds to group setup (M1.3) since the user has no group yet.
-
-**M1.2 — Log in**
-As a returning user, I can log in with email/password.
-- `supabase.auth.signInWithPassword`.
-- On success: if the user has an active `group_members` row → go to Home; else → group setup.
-
-**M1.3 — Create a group**
-As a user with no group, I can create one by name.
-- Calls RPC `create_group_with_owner(p_name, p_display_name)` — display name derived from
-  `user_metadata.full_name` or the email local-part, capitalized (same fallback as
-  `deriveDisplayName` on web).
-- This RPC also seeds the group's default bill/income categories — nothing else to do client-side.
-
-**M1.4 — Join a group via invite link**
-As an invited user, I can open an invite link (`finkith://join/{code}` deep link, or a universal
-link if you set one up) and join.
-- Unauthenticated visitor: call `get_group_by_invite_code(p_invite_code)` to show "You're invited to
-  join {group name}" before requiring login/signup.
-- After auth: call `join_group_by_code(p_invite_code, p_display_name)`.
-- Error cases to surface: invalid/expired code, already in a group.
-
-**M1.5 — Session persistence**
-As a user, I stay logged in across app restarts.
-- Supabase client configured with `expo-secure-store` as `AsyncStorage`-compatible storage.
-
-**M1.6 — Log out**
-- `supabase.auth.signOut()`, clear local Query cache, return to login screen.
-
-### M2 — Income & Bills core
-
-**M2.1 — Add income entry**
-As a group member, I can log an income entry.
-- Fields: member (defaults to me), category (from group's income categories), amount (> 0),
-  date (defaults today), note (optional) — mirrors `createAddIncomeSchema`.
-- Insert into `income_entries` with `group_id`, `member_id`, `category`, `amount`, `entry_date`,
-  `note`.
-
-**M2.2 — Edit / delete income entry**
-- Update/delete by `id`; RLS scopes to group membership already, no extra guard needed client-side.
-
-**M2.3 — Add bill**
-As a group member, I can add a bill.
-- Fields: name, category, amount (> 0), due day (1–31), fixed (bool), repeat monthly (bool),
-  paid (bool) — mirrors `createBillSchema`.
-- On insert: if `paid` is true, set `paid_at = now()`; else `null`.
-- `cycle_month` defaults server-side (`to_char(now(),'YYYY-MM')`) — don't set it from the client
-  unless adding a bill for a past/future cycle explicitly.
-
-**M2.4 — Edit / delete bill**
-- Same shape as add; toggling `paid` must also set/clear `paid_at` (this is what scopes "paid" to
-  the current monthly cycle for repeating bills — there's no reset job, the month comparison does
-  the work).
-
-**M2.5 — Toggle bill paid from a list row**
-As a group member, I can mark a bill paid/unpaid with one tap without opening the edit form.
-- Same update as M2.4 but a lightweight one-field mutation (`toggleBillPaid` equivalent).
-
-**M2.6 — Bill due-status badge**
-As a group member, I can see at a glance which bills are due soon, overdue, or paid.
-- Port `getBillDueInfo`-equivalent logic: for `repeat_monthly` bills, compute next due date from
-  `due_day` relative to today; status is `overdue` (past due day, unpaid), `due-soon` (within N days,
-  unpaid — check the web app's threshold constant), or `upcoming`/`paid` otherwise. Non-repeating
-  bills only "belong" to the month in `cycle_month`.
-
-### M3 — Home dashboard
-
-**M3.1 — Hero summary**
-As a group member, on Home I see: combined income (with "N contributing" subtext), total bills
-(with paid/pending breakdown), projected-after-bills (income − all bills, red if negative), and
-available-today (income − paid bills only, red if negative).
-- All derived client-side from the month's `income_entries` + `bills` — no new query, just port
-  `computeHero`.
-
-**M3.2 — Month switcher**
-As a group member, I can switch which month Home/Bills/History show.
-- A single month value (`YYYY-MM`) shared across the three screens — equivalent to the web app's
-  `?month=` query param living in the shell (`AppChrome`). In RN, hold it in a shared context or
-  navigation param at the tab-navigator level.
-
-**M3.3 — Member strip**
-As a group member, I see each active member's avatar, name, and their income total for the month,
-plus an "add" tile linking to Settings (invite flow).
-
-**M3.4 — Activity feed**
-As a group member, I see a merged, date-sorted list of income entries and bills for the month, with
-All/Income/Bills filter chips (client-side filter, no refetch). Tapping a row opens that item for
-editing (income → income form, bill → bill form).
-
-### M4 — History
-
-**M4.1 — 6-month income trend**
-As a group member, I see a bar chart of income totals for the current month + 5 preceding months,
-current month highlighted. Empty state if the whole range has zero income.
-
-**M4.2 — Current-month category breakdown**
-As a group member, I see this month's income grouped by category, sorted descending by amount, with
-percent-of-total.
-
-**M4.3 — Earlier months list**
-As a group member, I see the 5 non-current months from the trend, most recent first, each showing a
-total, with an empty state if there's no prior history.
-
-### M5 — Settings & group management
-
-**M5.1 — View/edit group members**
-As a group admin, I can see all members (active + invited) and their roles.
-
-**M5.2 — Invite a member**
-As a group admin, I can share the group's invite link/code (deep link built from `invite_code`).
-
-**M5.3 — Change currency**
-As a group admin, I can switch the group's currency between EUR and BRL (only these two are valid —
-`isCurrency` guard). This is a group-wide setting, not per-user.
-
-**M5.4 — Manage categories**
-As a group member, I can add/delete custom bill or income categories (name + color accent). Deleting
-a category never touches historical entries — `category` on `bills`/`income_entries` is plain text,
-not a foreign key.
-
-**M5.5 — Delete account**
-As a user, I can delete my account. Calls `delete_own_account()`. If I created a group, deleting my
-account deletes that whole group (cascades); if I'm just a member elsewhere, only my membership is
-removed. Warn the user about this distinction in the confirmation dialog — it's not just "delete my
-data."
-
-### M6 — Push notifications
-
-**M6.1 — Register for push**
-As a user, on first launch (or from Settings) I can enable notifications; the app registers an Expo
-push token and saves it server-side (see §6 schema note — this needs a new table, `expo_push_tokens`,
-distinct from the web app's `push_subscriptions`).
-
-**M6.2 — Bill due/overdue reminders**
-As a user, I receive a push notification when a repeating bill is due-soon or overdue, once per bill
-per user per monthly cycle (same dedupe rule as `bill_reminders_sent`: unique on
-`(bill_id, user_id, cycle_month, reminder_type)`).
-- The existing cron job (`src/app/api/cron/bill-reminders`) needs to also fan out to
-  `expo_push_tokens` via Expo's push API (`exp.host/--/api/v2/push/send`) alongside its existing
-  Web Push branch — this is a backend change, not something the RN client does itself.
-
-### M7 — Polish
-
-**M7.1 — Localization** — port `en`/`pt-BR` dictionaries; respect device locale by default with an
-in-app override (mirrors the web app's locale switcher).
-
-**M7.2 — Empty states** — every list (bills, income, activity, history) has an explicit
-"nothing yet" state, never mock/sample data (per `AGENTS.md`: no mock data in the UI).
-
-**M7.3 — Pull-to-refresh** — since there's no Server Component auto-revalidation in RN, every screen
-needs an explicit refetch affordance (pull-to-refresh + on-focus refetch via React Navigation's
-`useFocusEffect` + Query's `refetch`).
+| Concern | Choice | Notes |
+|---|---|---|
+| Framework | **Expo (SDK 54+) with expo-router** | File-based routing maps cleanly onto the web app's route structure. |
+| Language | TypeScript, strict | |
+| Backend client | `@supabase/supabase-js` v2 | With `AsyncStorage` (or `expo-secure-store`) as the auth storage adapter, `autoRefreshToken: true`, `detectSessionInUrl: false`. |
+| Server data | **TanStack Query** | Replaces Next.js server components + `revalidatePath`. One query key per resource, invalidated on mutation. |
+| Forms | `react-hook-form` + `zod` + `@hookform/resolvers/zod` | Same schemas as web — port `types.ts` from each feature unchanged. |
+| Styling | **NativeWind v4** | Lets the Tailwind token names in §4 carry over. A plain `StyleSheet` theme object is an acceptable alternative; do not mix both. |
+| Icons | `lucide-react-native` | Same icon names as web. |
+| i18n | `i18n-js` or a plain dictionary module | Port `src/shared/lib/i18n/dictionaries/*` verbatim; they are plain TS objects with function-valued entries for interpolation. |
+| Dates | `date-fns` | Already a dependency on web. |
+| Push | `expo-notifications` + Expo Push Service | See §9. |
+| Deep links | `expo-linking` | Scheme `finkith://` + universal/app links on `finkith.com`. |
+| Build/release | EAS Build + EAS Submit | |
 
 ---
 
-## 6. Schema
+## 4. Design system
 
-### Reused as-is (no changes)
+Port the tokens from `src/app/globals.css` exactly. The app is **dark-only** — there is no light theme; do not add one.
 
-```sql
--- groups, group_members, income_entries, bills, categories,
--- push_subscriptions, bill_reminders_sent
--- — see supabase/migrations/0001_init.sql through 0010_fix_group_members_rls.sql
--- in the web app repo for the authoritative source.
+**Backgrounds:** `bg-base #131120`, `bg-elevated`/`bg-sheet #1a1726`. Hero gradient `#2a1d35 → #1c1628 → #181322`. Page gradient `#241a3a → #16121f → #0c0a12`.
+
+**Text ramp:** `primary #ffffff`, `secondary #e7e4f0`, `tertiary #cfccdd`, `muted #9a97ad`, `subtle #8d8aa3`, `faint #7c7991`, `dim #6b6880`, `faintest #56536a`, `icon #b6b3c9`.
+
+**Brand:** `primary #c264af`, `primary-dark #9c4f8f`, `primary-darker #8a3f7d`, `primary-light #d27cc0`, `primary-muted #c6a9d4`.
+
+**Semantic:** `positive #6fd4ce`, `positive-dark #56c6c0`, `warning #e0a458`, `warning-dark #e0b85a`, `danger #e08a8a`, `violet #9b8cf0`, `violet-dark #7d7bd6`, `neutral-accent #7f8b95`.
+
+**Avatar/category cycle (6):** `#e88aa0`, `#8ad6a0`, `#88b6e8`, `#e0b85a`, `#9b8cf0`, `#6fd4ce`. `group_members.color_index` is `0..5` and indexes this list.
+
+**Surfaces:** white at 3% / 5% / 7% / 9% opacity; border at 8%.
+
+**Radii:** xs 8, sm 11, md 13, lg 15, xl 18, 2xl 22, 3xl 26.
+
+**Glow shadows:** primary `0 16px 34px -12px rgba(194,100,175,.7)`; positive `0 16px 34px -12px rgba(111,212,206,.5)`. On Android use `elevation` + a tinted background; the coloured glow will not reproduce exactly — approximate, don't fight it.
+
+**Fonts:** display = Sora (bold/semibold headings, money figures), body = Manrope. Load via `expo-font`.
+
+**Chip accents:** the 12 named accents in `src/shared/lib/chip-accents.ts` (`primary`, `positive`, `positive-dark`, `warning`, `violet`, `neutral-accent`, `avatar-1..5`, `neutral`). `categories.color` stores one of these names. Port the list as the single source of truth — a category's colour is *always* looked up from it, never hardcoded per screen.
+
+**Motion:** sheets slide up 300ms `cubic-bezier(.2,.8,.2,1)`; backdrop fades in 250ms. Use a native bottom-sheet library (`@gorhom/bottom-sheet`) rather than reimplementing.
+
+---
+
+## 5. Database schema (unchanged)
+
+All tables are in `public`, all have RLS enabled, all financial tables are scoped by `group_id` through `public.is_active_group_member(group_id)`.
+
+### `groups`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | `gen_random_uuid()` |
+| `name` | text NOT NULL | |
+| `invite_code` | text NOT NULL UNIQUE | 8 hex chars, generated server-side |
+| `created_by` | uuid → `auth.users(id)` ON DELETE CASCADE | |
+| `currency` | text NOT NULL DEFAULT `'EUR'` | CHECK in (`EUR`, `BRL`) |
+| `created_at` | timestamptz | |
+
+*RLS:* select/update require active membership; insert requires `created_by = auth.uid()`.
+
+### `group_members`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | This is the id income entries reference — **not** `user_id` |
+| `group_id` | uuid → `groups(id)` CASCADE | |
+| `user_id` | uuid → `auth.users(id)` CASCADE, nullable | |
+| `display_name` | text NOT NULL | |
+| `role` | text | `admin` \| `member` |
+| `color_index` | smallint 0–5 | `member_count % 6` at join time |
+| `status` | text | `active` only, post-`0011`. Kept because the RLS helpers and every membership query filter on it |
+| `created_at` | timestamptz | |
+| | | UNIQUE `(group_id, user_id)` |
+
+*RLS (post-`0011`):* **no insert policy** — memberships are only ever created by `create_group_with_owner` and `join_group_by_code`, which are security definer and bypass RLS, so a client insert is never legitimate. Update allowed for admins, or for your own row **provided `role` stays `member` and `status` stays `active`** (this is what stops self-promotion). Delete for admins or self.
+
+### `income_entries`
+`id` uuid PK · `group_id` → groups CASCADE · `member_id` → `group_members(id)` CASCADE · `category` text · `amount` numeric(10,2) CHECK > 0 · `note` text nullable · `entry_date` date DEFAULT current_date · `created_at`.
+
+### `bills`
+`id` uuid PK · `group_id` → groups CASCADE · `name` text · `category` text · `amount` numeric(10,2) CHECK > 0 · `due_day` smallint CHECK 1–31 · `fixed` bool DEFAULT true · `paid` bool DEFAULT false · `paid_at` timestamptz nullable · `repeat_monthly` bool DEFAULT true · `cycle_month` text NOT NULL DEFAULT `to_char(now(),'YYYY-MM')` CHECK `^\d{4}-\d{2}$` · `created_at`.
+
+> Note there is **no `member_id` on bills** — bills belong to the group, not a person. There is no split/settle-up logic in the product.
+
+### `categories`
+`id` uuid PK · `group_id` → groups CASCADE · `type` text CHECK in (`bill`,`income`) · `name` text · `color` text (a chip accent name) · `created_at` · UNIQUE `(group_id, type, name)`.
+
+Seeded per group by `create_group_with_owner`: bills = Housing/Utilities/Insurance/Subscriptions/Groceries/Fuel/Other; income = Salary/Freelance/Bonus/Part-time/Gift/Other.
+
+### `push_subscriptions`
+`id` uuid PK · `user_id` → auth.users CASCADE · `endpoint` text UNIQUE · `p256dh` text · `auth` text · `created_at`. RLS: own rows only.
+**→ needs a migration for native tokens; see §9.**
+
+### `bill_reminders_sent`
+`id` uuid PK · `bill_id` → bills CASCADE · `user_id` → auth.users CASCADE · `cycle_month` date · `reminder_type` CHECK in (`due-soon`,`overdue`) · `sent_at` · UNIQUE `(bill_id, user_id, cycle_month, reminder_type)`. Written only by the cron via service-role; users can select their own.
+
+### Postgres functions (all `security definer`)
+| Function | Grant | Purpose |
+|---|---|---|
+| `is_active_group_member(uuid) → bool` | internal | RLS helper, avoids policy recursion |
+| `is_group_admin(uuid) → bool` | internal | RLS helper |
+| `create_group_with_owner(p_name, p_display_name) → groups` | authenticated | Atomically creates group + owner membership + 13 seed categories |
+| `join_group_by_code(p_invite_code, p_display_name) → void` | authenticated | Validates code, rejects if already in a group, derives `color_index` |
+| `get_group_by_invite_code(p_invite_code) → (id, name)` | **anon** + authenticated | The only unauthenticated read of `groups`; returns name only |
+| `delete_own_account() → void` | authenticated | Deletes owned groups, memberships, then the auth user |
+
+---
+
+## 6. API surface
+
+The web app has **no REST API of its own** except the cron route — it talks to Supabase directly via `supabase-js` and Next.js server actions. The RN app does the same, with the anon key and the user's JWT. Below, each operation is given both as the `supabase-js` call to write and as the underlying PostgREST/GoTrue request, for reference and for debugging with `curl`.
+
+Base URL: `https://<project-ref>.supabase.co`. Every request carries `apikey: <anon key>` and `Authorization: Bearer <access_token>`.
+
+### 6.1 Auth (GoTrue, `/auth/v1`)
+
+| Operation | supabase-js | HTTP |
+|---|---|---|
+| Sign up | `auth.signUp({ email, password, options: { data: { full_name, locale }, emailRedirectTo } })` | `POST /auth/v1/signup` |
+| Sign in | `auth.signInWithPassword({ email, password })` | `POST /auth/v1/token?grant_type=password` |
+| Refresh | automatic | `POST /auth/v1/token?grant_type=refresh_token` |
+| Sign out | `auth.signOut()` | `POST /auth/v1/logout` |
+| Current user | `auth.getUser()` | `GET /auth/v1/user` |
+| Update locale metadata | `auth.updateUser({ data: { locale } })` | `PUT /auth/v1/user` |
+| Password reset *(new, finding #5)* | `auth.resetPasswordForEmail(email, { redirectTo })` | `POST /auth/v1/recover` |
+
+Email confirmation is **required**: `signUp` returns no session. The confirmation link must deep-link back into the app (§7.3).
+
+### 6.2 Data (PostgREST, `/rest/v1`)
+
+`{gid}` = current group id. `{month}` = `YYYY-MM`. `{start}`/`{end}` = first day of month and first day of next month, ISO `YYYY-MM-DD`.
+
+**Bootstrap — current group** (call once after auth; every screen depends on it):
+```
+GET /rest/v1/group_members?select=id,role,groups(id,name,currency)&user_id=eq.{uid}&status=eq.active
+```
+Returns `{ groupId, groupName, memberId, role, currency }` or null → route to onboarding.
+
+**Group members**
+```
+GET  /rest/v1/group_members?select=id,group_id,user_id,invited_email,display_name,role,color_index,status,created_at
+       &group_id=eq.{gid}&status=eq.active&order=created_at.asc
+PATCH /rest/v1/group_members?id=eq.{id}          # display_name; role/status only if admin
+DELETE /rest/v1/group_members?id=eq.{id}         # admin, or self (leave group)
 ```
 
-Key fields worth knowing going in:
-
-- `groups.currency`: `'EUR' | 'BRL'`, defaults `'EUR'`.
-- `group_members.color_index`: 0–5, assigned round-robin (`member_count % 6`) on join — used to pick
-  an avatar color, not user-chosen.
-- `group_members.status`: `'active' | 'invited'` — an "invited" row has `user_id = null` and
-  `invited_email` set; it's a placeholder until that person joins.
-- `bills.paid_at`: drives "paid for the current cycle" — a repeating bill's `paid` flag is only
-  considered current if `paid_at` falls within the current month; there's no monthly reset job.
-- `bills.cycle_month`: `'YYYY-MM'` — only relevant for non-repeating bills (repeating bills recur
-  every month via `due_day` regardless of `cycle_month`).
-- `categories`: unique per `(group_id, type, name)`; `category` columns on `bills`/`income_entries`
-  are free text, not FKs — deleting a category is non-destructive to history.
-
-### New migration needed: Expo push tokens
-
-Web Push (VAPID: endpoint + p256dh + auth keys) and Expo Push (a single opaque token string) are
-different delivery mechanisms — you can't reuse `push_subscriptions` for both without overloading
-its shape. Add a parallel table:
-
-```sql
-create table expo_push_tokens (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  token text not null unique,
-  created_at timestamptz not null default now()
-);
-
-alter table expo_push_tokens enable row level security;
-
-create policy "expo_push_tokens_own" on expo_push_tokens
-  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+**Group**
+```
+GET   /rest/v1/groups?select=invite_code&id=eq.{gid}
+PATCH /rest/v1/groups?id=eq.{gid}                # { currency }
 ```
 
-The cron job then queries both `push_subscriptions` (Web Push branch, unchanged) and
-`expo_push_tokens` (new Expo branch) per user and sends through whichever channels they've
-registered.
+**Income entries**
+```
+GET    /rest/v1/income_entries?select=id,group_id,member_id,category,amount,note,entry_date,created_at
+         &group_id=eq.{gid}&entry_date=gte.{start}&entry_date=lt.{end}&order=entry_date.desc
+POST   /rest/v1/income_entries    # { group_id, member_id, category, amount, entry_date, note }
+PATCH  /rest/v1/income_entries?id=eq.{id}
+DELETE /rest/v1/income_entries?id=eq.{id}
+```
+History range query (6 months, aggregate client-side):
+```
+GET /rest/v1/income_entries?select=category,amount,entry_date&group_id=eq.{gid}
+      &entry_date=gte.{sixMonthsStart}&entry_date=lt.{end}
+```
+
+**Bills**
+```
+GET    /rest/v1/bills?select=id,group_id,name,category,amount,due_day,fixed,paid,paid_at,repeat_monthly,cycle_month,created_at
+         &group_id=eq.{gid}&or=(repeat_monthly.eq.true,cycle_month.eq.{month})&order=due_day.asc
+POST   /rest/v1/bills   # { group_id, name, category, amount, due_day, fixed, repeat_monthly, cycle_month, paid, paid_at }
+PATCH  /rest/v1/bills?id=eq.{id}
+DELETE /rest/v1/bills?id=eq.{id}
+```
+`paid_at` is set to `now()` when `paid` flips true, and `null` when false.
+
+**Categories**
+```
+GET    /rest/v1/categories?select=id,group_id,type,name,color,created_at&group_id=eq.{gid}
+POST   /rest/v1/categories   # { group_id, type, name, color }
+DELETE /rest/v1/categories?id=eq.{id}
+```
+
+**Push subscriptions** — see §9; shape changes for native.
+
+### 6.3 RPC (`POST /rest/v1/rpc/<fn>`)
+
+| Endpoint | Body | Auth |
+|---|---|---|
+| `/rpc/create_group_with_owner` | `{ p_name, p_display_name }` | authenticated |
+| `/rpc/join_group_by_code` | `{ p_invite_code, p_display_name }` | authenticated |
+| `/rpc/get_group_by_invite_code` | `{ p_invite_code }` | **anon** ok |
+| `/rpc/delete_own_account` | `{}` | authenticated |
+
+`p_display_name` is derived client-side from `user_metadata.full_name ?? name`, falling back to the capitalised email local-part (port `deriveDisplayName` from `src/features/groups/api/actions.ts`).
+
+### 6.4 Server-side cron (unchanged path, changed transport)
+
+`GET /api/cron/bill-reminders` on the Next.js deployment, scheduled `0 12 * * *` by `vercel.json`, authorised by `Authorization: Bearer $CRON_SECRET`. It uses the **service-role key**. Rewrite its send step for native push (§9); leave the scheduling, the `bill_reminders_sent` dedupe key, and the locale lookup as they are.
+
+### 6.5 Error handling
+
+PostgREST returns `{ code, message, details, hint }`. Two Postgres exceptions are surfaced to users verbatim by the web app and should be caught and **translated** in RN instead:
+- `You're already in a group` (from `join_group_by_code`)
+- `Invalid or expired invite link` (same)
+
+A `23505` unique violation on `categories` means the category name already exists for that type.
 
 ---
 
-## 7. Screen-to-table map (quick reference)
+## 7. Navigation & routing
 
-| Screen | Reads | Writes |
-|---|---|---|
-| Login/Signup | `auth.users` (via Supabase Auth) | — |
-| Group setup / Join | `groups` (via RPC) | `groups`, `group_members` (via RPC) |
-| Home | `group_members`, `income_entries`, `bills`, `categories` | `income_entries`, `bills` (via activity row taps) |
-| Bills tab | `bills`, `categories` | `bills` |
-| History | `income_entries` (6-month range) | — |
-| Settings | `group_members`, `groups`, `categories` | `group_members`, `groups`, `categories`, `auth.users` (delete) |
-| Push opt-in | `expo_push_tokens` | `expo_push_tokens` |
+```
+app/
+  (auth)/          login · signup · forgot-password · reset-password
+  onboarding/      setup (create or join)
+  join/[code]      invite landing (works signed-out)
+  (tabs)/
+    home           dashboard
+    bills
+    history
+    settings
+  _layout.tsx      session + current-group gate
+```
+
+**Gate logic** (mirrors `src/proxy.ts` + the layout redirects):
+
+1. No session → `(auth)/login`, preserving a `next` target for invite links.
+2. Session but `getCurrentGroup()` is null → `onboarding/setup`.
+3. Otherwise → `(tabs)/home`.
+
+**Tabs:** Home, Bills, `+` (centre FAB, not a route), History, Settings. The FAB opens an action sheet with "Add income" / "Add bill", which opens the corresponding form sheet. On web the sheet state lives in the URL (`?sheet=income`); in RN use local state or a modal route — do not replicate the query-param mechanism.
+
+**Header** (persistent across tabs): month picker button (current + previous 5 months, `MMM yyyy` in the user's locale) on the left above the group name; a stack of up to 3 member avatars (+N overflow) on the right, tapping through to Settings.
+
+**Deep links** — register scheme `finkith://` and universal/app links for `https://finkith.com`:
+| Link | Behaviour |
+|---|---|
+| `/join/{code}` | Signed-out → invite screen showing the group name (via the anon RPC) with Sign in / Create account, both carrying `next`. Signed-in and already in a group → Home. Signed-in with no group → join confirmation card. |
+| `/auth/callback?code=…` | Exchange the code for a session (`auth.exchangeCodeForSession`), then honour `next`, else Home. |
+| password reset link | Route to `reset-password`. |
+
+Only same-origin/relative `next` values are honoured (`startsWith("/") && !startsWith("//")`).
+
+---
+
+## 8. Milestones
+
+Each milestone is independently demoable. Estimates assume one developer.
+
+---
+
+### M0 — Backend deltas & project setup · ~3 days
+
+**Backend (do first, in `supabase/migrations/`):**
+1. `0012_native_push_tokens.sql` — see §9. (`0011` is already taken by the invite-by-email removal.)
+2. Decide findings #6, #7 and #8 above; migrate or adjust copy accordingly.
+
+**App:**
+- `npx create-expo-app` with expo-router + TypeScript; EAS project configured.
+- Supabase client with AsyncStorage/SecureStore adapter, `detectSessionInUrl: false`.
+- NativeWind configured with the §4 tokens; Sora + Manrope loaded.
+- `expo-linking` scheme + AASA / assetlinks hosted on `finkith.com`.
+- Env via `app.config.ts` `extra` + EAS secrets: `SUPABASE_URL`, `SUPABASE_ANON_KEY`. **No service-role key in the app.**
+
+**Done when:** the app boots, reaches Supabase, and a hardcoded `select` against `categories` returns rows for a signed-in test user.
+
+---
+
+### M1 — Foundations: design system, i18n, money · ~4 days
+
+- Port `src/shared/lib/money.ts` **and** `money.test.ts`. Verify `parseMoney`/`formatAmountForInput` round-trip in all three locales on device (Hermes' `Intl` support differs from V8 — if `Intl.NumberFormat.formatToParts` or `Intl.DisplayNames` is missing, enable `expo-localization`'s ICU build or polyfill with `@formatjs/intl-*`; **this is the single most likely surprise in the port**).
+- Port the three dictionaries (`en`, `pt-BR`, `es-ES`) and `LOCALE_INTL_TAG` / `matchLocale`. Initial locale = device locale matched against the supported list, then `user_metadata.locale` once signed in.
+- Build the shared component set, mirroring `src/shared/components/`: `Button`, `Input`, `Select`, `Switch`, `SegmentedControl`, `Chip`, `Avatar`, `ProgressBar`, `Sheet`, `DatePicker`, `CategoryBreakdown`, `BottomNav`. Reuse before creating — the web repo's README lists every one.
+
+**Done when:** a storybook-ish demo screen renders every primitive in all three languages and both currencies.
+
+---
+
+### M2 — Auth · ~4 days
+
+- **Login:** email + password, zod schema from `src/features/auth/types.ts`. Inline field errors, root error from Supabase.
+- **Signup:** name + email + password (min 8). Writes `{ full_name, locale }` into `user_metadata`. No session is returned — show the "confirmation sent to {email}" state.
+- **Email confirmation:** deep link → `exchangeCodeForSession` → `next` or Home.
+- **Forgot password** (finding #5): request screen + deep-linked reset screen.
+- **Session persistence** across cold starts; auto-refresh; sign-out clears storage and query cache.
+- **Delete account:** confirmation dialog spelling out that groups the user created are deleted with all their data (finding #8), then `rpc('delete_own_account')` → sign out → login.
+
+**Done when:** a new account can be created, confirmed by email on a real device, signed out, and signed back in.
+
+---
+
+### M3 — Onboarding & groups · ~3 days
+
+- **Setup screen:** create a group (name, required) → `rpc('create_group_with_owner')` → Home. Also an entry point to paste/scan an invite code.
+- **Join screen** (`/join/{code}`): resolve the group name via the anon RPC; handle not-found; signed-out branch offering sign in / create account with `next`; signed-in branch showing a join confirmation → `rpc('join_group_by_code')` → Home.
+- Translate the two Postgres error strings (§6.5).
+- The setup screen also carries logout + delete account, since a user with no group is otherwise stuck.
+
+**Done when:** two devices, two accounts, one group — the second joins via a tapped invite link.
+
+---
+
+### M4 — App shell · ~3 days
+
+- Tab navigator with the centre FAB and the persistent header (§7).
+- Month picker sheet; selected month held in a shared store (Zustand or context) and consumed by Home, Bills, History, Settings.
+- `currentGroup` query with the gate/redirect logic; loading and error states.
+- Add-choice action sheet wiring to the (still empty) income and bill sheets.
+
+**Done when:** all four tabs render placeholders, the month picker changes a visible label, and the gate correctly bounces a group-less user to onboarding.
+
+---
+
+### M5 — Income · ~4 days
+
+- **Add/edit income sheet:** member picker (defaults to the current user's `member_id`), category chips from `categories` where `type='income'`, amount (locale-parsed), date picker, optional note. Schema from `src/features/income/types.ts`.
+- Create / update / delete against `income_entries`; invalidate the income and dashboard queries.
+- Amount field seeded with `formatAmountForInput` when editing.
+
+**Done when:** entries can be added, edited and deleted, and survive a restart.
+
+---
+
+### M6 — Bills · ~5 days
+
+- **Bills screen:** summary card (paid total, pending total, % paid, progress bar), category breakdown of *paid-this-cycle* bills, and the bill list.
+- **Filter:** All / Fixed / Variable segmented control.
+- **Add/edit bill sheet:** name, amount, due day (1–31), fixed vs. variable segmented control, category chips (`type='bill'`), repeat-monthly switch, paid switch. Set `cycle_month` from the selected month (finding #3).
+- **Paid toggle** in the list with optimistic update; writes `paid` + `paid_at` via `paidAtFor(month)`.
+- Port `isPaidInCycle`, `paidAtFor`, `monthKey`, `getBillDueInfo`, `computeBillsSummary`, `computeCategoryBreakdown` and `filterBills` from `src/features/bills/lib.ts` unchanged — **and port `lib.test.ts` with them**; those tests pin the month-boundary behaviour that three separate bugs came out of.
+
+**Done when:** due/due-soon/overdue badges are correct across a month boundary (test with a device clock change) and the summary matches the Home figures.
+
+---
+
+### M7 — Home dashboard · ~4 days
+
+- **Hero card:** one card showing all four figures at once — Combined income as the headline (with the "N contributing" line under it), then Total bills and Projected after bills side by side, then Available today. The two signed figures render their absolute value and encode the sign in colour (`text-positive` / `text-danger`); keep that, and keep `computeHero`'s shape, which returns exactly the fields the card draws.
+- **Member strip:** horizontal avatars with each member's income total for the month, plus an add shortcut.
+- **Activity list:** income entries and bills merged, sorted by date descending, filterable All / Income / Bills. Tapping an item opens the corresponding edit sheet.
+- **Empty state** when the group has no income entries and no bills — explicit "no activity yet" copy, never sample data.
+
+**Done when:** the hero totals reconcile with the Bills screen for the same month.
+
+---
+
+### M8 — History · ~3 days
+
+- Six-month income trend bar chart (`computeTrend`, bars scaled to the max, current month highlighted).
+- Category breakdown for the selected month.
+- "Earlier months" list, most recent first, year-qualified labels.
+- Label the screen as **income** history (finding #6).
+
+**Done when:** the chart matches a hand-computed total for a seeded account.
+
+---
+
+### M9 — Settings · ~4 days
+
+- **Invite card:** shows the invite URL, with native share sheet and copy-to-clipboard.
+- **Members list:** avatar, name, "You" marker, role, and this month's income total per member.
+- **Language switcher:** updates local state *and* `user_metadata.locale` (the cron reads it).
+- **Currency switcher:** EUR / BRL, patches `groups.currency`, invalidates everything money-shaped.
+- **Manage categories:** list by type, add (name + accent colour picker, max 30 chars), delete. Deleting must warn that existing rows keep the plain-text category name and lose their colour.
+- **Notification toggle** (wired in M10), logout, delete account.
+
+**Done when:** switching currency and language updates every screen without a restart.
+
+---
+
+### M10 — Push notifications · ~4 days
+
+See §9 for the design. Client work: permission prompt, token registration/deregistration on the toggle and on sign-out, foreground/background handlers, and tapping a reminder deep-links to the Bills screen scrolled to that bill.
+
+**Done when:** a bill due tomorrow produces one localised push per group member per cycle on both platforms, and a second cron run sends nothing.
+
+---
+
+### M11 — Hardening & release · ~5 days
+
+- Offline: TanStack Query persistence, an offline banner, mutation retry on reconnect.
+- Error boundaries; Sentry (or equivalent) wired to EAS builds.
+- Accessibility pass: labels on every icon-only button, min 44pt hit targets, dynamic-type sanity check.
+- Safe-area handling on every screen (the web app already compensates for iOS insets).
+- App icons, splash, store listings in all three languages, privacy policy and terms links (already live at `/privacy` and `/terms`).
+- EAS Submit to TestFlight and Play internal testing.
+
+---
+
+**Total: roughly 9–10 weeks for one developer.** M0–M4 are strictly sequential; M5–M9 can be reordered or parallelised across two developers.
+
+---
+
+## 9. Push notifications — the one backend change
+
+**Problem.** `src/app/api/cron/bill-reminders/route.ts` sends via `web-push` to a VAPID endpoint stored in `push_subscriptions (endpoint, p256dh, auth)`. Native apps have no such endpoint — they have an APNs/FCM device token, or an Expo push token.
+
+**Recommended approach — Expo Push Service** (one API for both platforms, no APNs certificate handling in the cron):
+
+1. **Migration `0011_native_push_tokens.sql`:**
+   ```sql
+   create table device_push_tokens (
+     id uuid primary key default gen_random_uuid(),
+     user_id uuid not null references auth.users(id) on delete cascade,
+     token text not null unique,          -- Expo push token
+     platform text not null check (platform in ('ios','android')),
+     created_at timestamptz not null default now()
+   );
+   alter table device_push_tokens enable row level security;
+   create policy "device_push_tokens_own" on device_push_tokens
+     for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+   ```
+   Keep `push_subscriptions` for the web PWA; the cron fans out to both.
+
+2. **Cron change:** after resolving recipients and the locale, look up `device_push_tokens` for the user and `POST https://exp.host/--/api/v2/push/send` with `{ to, title, body, data: { billId } }`, batched up to 100 per request. Handle `DeviceNotRegistered` in the receipt by deleting the token — the same lifecycle the existing code implements for web-push `404`/`410`.
+
+3. **Everything else stays:** the `0 12 * * *` schedule, the `CRON_SECRET` bearer check, the `bill_reminders_sent` unique key `(bill_id, user_id, cycle_month, reminder_type)` for dedupe, the `getBillDueInfo` status filter (repeating bills only), and the per-user locale lookup from `user_metadata`.
+
+**Copy:** title `"{bill name} · {Due soon|Overdue}"`, body from `dict.notifications.reminderDueSoonBody(name)` / `reminderOverdueBody(name)`, in the recipient's language.
+
+**If you prefer not to depend on Expo's service,** send through FCM directly (with APNs configured in Firebase) and store raw FCM tokens instead — the table and cron shape are identical, only the send call changes.
+
+---
+
+## 10. What the RN app deliberately does *not* do
+
+Do not build these; they do not exist in the product today and adding them expands the backend contract:
+
+- Multiple groups per user, or a group switcher.
+- Bill splitting, per-member bill attribution, or settle-up.
+- Editing another member's role, or transferring group ownership.
+- Bank/open-banking imports, receipts, or attachments.
+- Budgets, goals, or forecasting beyond the "projected after bills" hero figure.
+- Currencies beyond EUR and BRL (the `groups.currency` CHECK constraint would reject them).
+- A light theme.
