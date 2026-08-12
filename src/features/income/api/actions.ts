@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/shared/lib/supabase/server";
 import { getCurrentGroup } from "@/shared/lib/supabase/get-current-group";
 import { addIncomeSchema, type AddIncomeValues } from "@/features/income/types";
+import { getLocale } from "@/shared/lib/i18n/server";
+import { getDictionary } from "@/shared/lib/i18n/dictionaries";
+import { describeError } from "@/shared/lib/errors";
 
 function revalidateIncome() {
   revalidatePath("/home");
@@ -15,7 +18,7 @@ export async function addEntry(values: AddIncomeValues): Promise<{ error: string
 
   const currentGroup = await getCurrentGroup();
   if (!currentGroup) {
-    return { error: "Not in a group" };
+    return { error: getDictionary(await getLocale()).errors.notInGroup };
   }
 
   const supabase = await createClient();
@@ -29,7 +32,7 @@ export async function addEntry(values: AddIncomeValues): Promise<{ error: string
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: describeError(error, getDictionary(await getLocale())) };
   }
 
   revalidateIncome();
@@ -54,7 +57,7 @@ export async function updateEntry(
     .eq("id", entryId);
 
   if (error) {
-    return { error: error.message };
+    return { error: describeError(error, getDictionary(await getLocale())) };
   }
 
   revalidateIncome();
@@ -65,7 +68,7 @@ export async function deleteEntry(entryId: string): Promise<{ error: string } | 
   const { error } = await supabase.from("income_entries").delete().eq("id", entryId);
 
   if (error) {
-    return { error: error.message };
+    return { error: describeError(error, getDictionary(await getLocale())) };
   }
 
   revalidateIncome();

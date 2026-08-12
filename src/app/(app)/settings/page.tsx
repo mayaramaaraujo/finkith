@@ -15,6 +15,7 @@ import { NotificationToggle } from "@/features/notifications/components/Notifica
 import { LanguageSwitcher } from "@/shared/components/LanguageSwitcher";
 import { getLocale } from "@/shared/lib/i18n/server";
 import { getDictionary } from "@/shared/lib/i18n/dictionaries";
+import { unwrap } from "@/shared/lib/supabase/unwrap";
 
 function monthRange(month: string) {
   const [year, monthNum] = month.split("-").map(Number);
@@ -62,11 +63,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     supabase.from("categories").select(CATEGORY_COLUMNS).eq("group_id", currentGroup.groupId),
   ]);
 
-  const members = (membersRes.data ?? []).map(mapGroupMemberRow);
-  const categories = (categoriesRes.data ?? []).map(mapCategoryRow);
+  const members = (unwrap(membersRes, "settings members") ?? []).map(mapGroupMemberRow);
+  const categories = (unwrap(categoriesRes, "settings categories") ?? []).map(mapCategoryRow);
+  const group = unwrap(groupRes, "settings group");
 
   const totalsByMember = new Map<string, number>();
-  for (const entry of entriesRes.data ?? []) {
+  for (const entry of (unwrap(entriesRes, "settings income") ?? [])) {
     totalsByMember.set(entry.member_id, (totalsByMember.get(entry.member_id) ?? 0) + Number(entry.amount));
   }
 
@@ -76,7 +78,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     monthTotal: totalsByMember.get(member.id) ?? 0,
   }));
 
-  const inviteUrl = `${protocol}://${host}/join/${groupRes.data?.invite_code ?? ""}`;
+  const inviteUrl = `${protocol}://${host}/join/${group?.invite_code ?? ""}`;
 
   return (
     <div className="flex flex-col gap-8">

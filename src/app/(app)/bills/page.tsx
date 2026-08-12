@@ -11,6 +11,7 @@ import { monthLabel } from "@/features/history/lib";
 import { getLocale } from "@/shared/lib/i18n/server";
 import { getDictionary } from "@/shared/lib/i18n/dictionaries";
 import { LOCALE_INTL_TAG } from "@/shared/lib/i18n/config";
+import { unwrap } from "@/shared/lib/supabase/unwrap";
 
 export default async function BillsPage() {
   const currentGroup = await getCurrentGroup();
@@ -25,7 +26,7 @@ export default async function BillsPage() {
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
   const supabase = await createClient();
-  const [{ data: billRows }, { data: categoryRows }] = await Promise.all([
+  const [billsRes, categoriesRes] = await Promise.all([
     supabase
       .from("bills")
       .select(BILL_COLUMNS)
@@ -39,8 +40,8 @@ export default async function BillsPage() {
       .eq("type", "bill"),
   ]);
 
-  const bills = (billRows ?? []).map(mapBillRow);
-  const categories = (categoryRows ?? []).map(mapCategoryRow);
+  const bills = (unwrap(billsRes, "bills") ?? []).map(mapBillRow);
+  const categories = (unwrap(categoriesRes, "bill categories") ?? []).map(mapCategoryRow);
   const summary = computeBillsSummary(bills, currentMonth);
   const categoryBreakdown = computeCategoryBreakdown(bills, colorsByCategoryName(categories), currentMonth);
 

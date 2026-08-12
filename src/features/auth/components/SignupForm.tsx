@@ -11,6 +11,7 @@ import { Input } from "@/shared/components/Input";
 import { createClient } from "@/shared/lib/supabase/client";
 import { createSignupSchema, type SignupFormValues } from "@/features/auth/types";
 import { useTranslation } from "@/shared/lib/i18n/context";
+import { describeError } from "@/shared/lib/errors";
 
 interface SignupFormProps {
   /** Where to land after signing up (e.g. an invite link). Only a same-origin path is honored. */
@@ -50,7 +51,7 @@ export function SignupForm({ next }: SignupFormProps) {
     });
 
     if (error) {
-      setError("root", { message: error.message });
+      setError("root", { message: describeError(error, dict) });
       return;
     }
 

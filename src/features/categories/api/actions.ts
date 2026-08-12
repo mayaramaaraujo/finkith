@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/shared/lib/supabase/server";
 import { getCurrentGroup } from "@/shared/lib/supabase/get-current-group";
 import { categorySchema, type CategoryValues } from "@/features/categories/types";
+import { getLocale } from "@/shared/lib/i18n/server";
+import { getDictionary } from "@/shared/lib/i18n/dictionaries";
+import { describeError } from "@/shared/lib/errors";
 
 function revalidateCategories() {
   revalidatePath("/settings");
@@ -17,7 +20,7 @@ export async function addCategory(values: CategoryValues): Promise<{ error: stri
 
   const currentGroup = await getCurrentGroup();
   if (!currentGroup) {
-    return { error: "Not in a group" };
+    return { error: getDictionary(await getLocale()).errors.notInGroup };
   }
 
   const supabase = await createClient();
@@ -29,7 +32,7 @@ export async function addCategory(values: CategoryValues): Promise<{ error: stri
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: describeError(error, getDictionary(await getLocale())) };
   }
 
   revalidateCategories();
@@ -40,7 +43,7 @@ export async function deleteCategory(categoryId: string): Promise<{ error: strin
   const { error } = await supabase.from("categories").delete().eq("id", categoryId);
 
   if (error) {
-    return { error: error.message };
+    return { error: describeError(error, getDictionary(await getLocale())) };
   }
 
   revalidateCategories();

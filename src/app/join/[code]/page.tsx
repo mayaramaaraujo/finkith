@@ -6,6 +6,7 @@ import { JoinGroupCard } from "@/features/groups/components/JoinGroupCard";
 import { getLocale } from "@/shared/lib/i18n/server";
 import { getDictionary } from "@/shared/lib/i18n/dictionaries";
 import { LinkButton } from "@/shared/components/LinkButton";
+import { unwrap } from "@/shared/lib/supabase/unwrap";
 
 interface JoinPageProps {
   params: Promise<{ code: string }>;
@@ -22,10 +23,14 @@ export default async function JoinPage({ params }: JoinPageProps) {
   const dict = getDictionary(await getLocale());
 
   const supabase = await createClient();
-  const [{ data: group }, userRes] = await Promise.all([
+  const [groupRes, userRes] = await Promise.all([
     supabase.rpc("get_group_by_invite_code", { p_invite_code: code }).maybeSingle(),
     supabase.auth.getUser(),
   ]);
+
+  // A lookup that failed is not the same as a code that doesn't exist: only
+  // the second should tell the visitor their invite is invalid.
+  const group = unwrap(groupRes, "invite code lookup");
 
   if (!group) {
     return (

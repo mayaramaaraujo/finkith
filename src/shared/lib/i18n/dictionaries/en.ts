@@ -64,6 +64,7 @@ export const en = {
     },
     validation: {
       nameRequired: "Bill name is required",
+      amountInvalid: "Enter an amount like 12.50",
       amountPositive: "Enter an amount greater than 0",
       categoryRequired: "Pick a category",
     },
@@ -79,6 +80,7 @@ export const en = {
     saveChanges: "Save changes",
     deleteEntry: "Delete income",
     validation: {
+      amountInvalid: "Enter an amount like 12.50",
       amountPositive: "Enter an amount greater than 0",
       dateRequired: "Pick a date",
       categoryRequired: "Pick a category",
@@ -203,6 +205,32 @@ export const en = {
       Gift: "Gift",
       Other: "Other",
     },
+  },
+  errors: {
+    generic: "Something went wrong. Please try again.",
+    offline: "You appear to be offline. Check your connection and try again.",
+    notAuthenticated: "Your session has expired. Sign in again.",
+    notInGroup: "You need to be in a group before you can do that.",
+    alreadyInGroup: "You're already in a group.",
+    invalidInvite: "That invite link is invalid or has expired.",
+    duplicateName: "That name is already in use.",
+    notAllowed: "You don't have permission to do that.",
+    invalidData: "Some of those details aren't valid. Check them and try again.",
+    invalidCredentials: "That email and password don't match.",
+    emailNotConfirmed: "Confirm your email first — check your inbox for the link.",
+    emailAlreadyRegistered: "An account already exists for that email.",
+    weakPassword: "Choose a stronger password.",
+    tooManyRequests: "Too many attempts. Wait a minute and try again.",
+  },
+  errorBoundary: {
+    title: "Something went wrong",
+    body: "We couldn't load this. It may be a temporary problem.",
+    retry: "Try again",
+  },
+  notFound: {
+    title: "Page not found",
+    body: "That page doesn't exist, or it has moved.",
+    home: "Back to home",
   },
 };
 

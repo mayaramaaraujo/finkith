@@ -20,6 +20,7 @@ export function ManageCategoriesSection({ categories }: ManageCategoriesSectionP
   const { dict } = useTranslation();
   const [type, setType] = useState<CategoryType>("bill");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -34,8 +35,10 @@ export function ManageCategoriesSection({ categories }: ManageCategoriesSectionP
 
   function handleDelete(id: string) {
     setDeletingId(id);
+    setError(null);
     startTransition(async () => {
-      await deleteCategory(id);
+      const result = await deleteCategory(id);
+      if (result?.error) setError(result.error);
       setDeletingId(null);
     });
   }
@@ -87,6 +90,12 @@ export function ManageCategoriesSection({ categories }: ManageCategoriesSectionP
           ))
         )}
       </div>
+
+      {error ? (
+        <p role="alert" className="mt-2 text-xs font-medium text-danger">
+          {error}
+        </p>
+      ) : null}
 
       <AddCategoryForm
         type={type}

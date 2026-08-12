@@ -11,6 +11,7 @@ import { Input } from "@/shared/components/Input";
 import { createClient } from "@/shared/lib/supabase/client";
 import { createLoginSchema, type LoginFormValues } from "@/features/auth/types";
 import { useTranslation } from "@/shared/lib/i18n/context";
+import { describeError } from "@/shared/lib/errors";
 
 interface LoginFormProps {
   /** Where to land after signing in (e.g. an invite link). Only a same-origin path is honored. */
@@ -34,7 +35,7 @@ export function LoginForm({ next }: LoginFormProps) {
     const { error } = await supabase.auth.signInWithPassword(values);
 
     if (error) {
-      setError("root", { message: error.message });
+      setError("root", { message: describeError(error, dict) });
       return;
     }
 

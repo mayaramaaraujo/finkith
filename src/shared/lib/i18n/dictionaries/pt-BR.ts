@@ -66,6 +66,7 @@ export const ptBR: Dictionary = {
     },
     validation: {
       nameRequired: "O nome da conta é obrigatório",
+      amountInvalid: "Informe um valor como 12,50",
       amountPositive: "Digite um valor maior que 0",
       categoryRequired: "Escolha uma categoria",
     },
@@ -81,6 +82,7 @@ export const ptBR: Dictionary = {
     saveChanges: "Salvar alterações",
     deleteEntry: "Excluir renda",
     validation: {
+      amountInvalid: "Informe um valor como 12,50",
       amountPositive: "Digite um valor maior que 0",
       dateRequired: "Escolha uma data",
       categoryRequired: "Escolha uma categoria",
@@ -205,5 +207,31 @@ export const ptBR: Dictionary = {
       Gift: "Presente",
       Other: "Outros",
     },
+  },
+  errors: {
+    generic: "Algo deu errado. Tente novamente.",
+    offline: "Você parece estar sem conexão. Verifique a internet e tente de novo.",
+    notAuthenticated: "Sua sessão expirou. Entre novamente.",
+    notInGroup: "Você precisa estar em um grupo para fazer isso.",
+    alreadyInGroup: "Você já está em um grupo.",
+    invalidInvite: "Este link de convite é inválido ou expirou.",
+    duplicateName: "Esse nome já está em uso.",
+    notAllowed: "Você não tem permissão para fazer isso.",
+    invalidData: "Alguns dados não são válidos. Confira e tente de novo.",
+    invalidCredentials: "E-mail e senha não conferem.",
+    emailNotConfirmed: "Confirme seu e-mail primeiro — procure o link na sua caixa de entrada.",
+    emailAlreadyRegistered: "Já existe uma conta com esse e-mail.",
+    weakPassword: "Escolha uma senha mais forte.",
+    tooManyRequests: "Muitas tentativas. Espere um minuto e tente de novo.",
+  },
+  errorBoundary: {
+    title: "Algo deu errado",
+    body: "Não conseguimos carregar isto. Pode ser um problema temporário.",
+    retry: "Tentar de novo",
+  },
+  notFound: {
+    title: "Página não encontrada",
+    body: "Esta página não existe ou foi movida.",
+    home: "Voltar ao início",
   },
 };

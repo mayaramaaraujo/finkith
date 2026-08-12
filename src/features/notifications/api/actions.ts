@@ -2,6 +2,9 @@
 
 import { createClient } from "@/shared/lib/supabase/server";
 import type { PushSubscriptionPayload } from "@/features/notifications/types";
+import { getLocale } from "@/shared/lib/i18n/server";
+import { getDictionary } from "@/shared/lib/i18n/dictionaries";
+import { describeError } from "@/shared/lib/errors";
 
 export async function saveSubscription(
   payload: PushSubscriptionPayload,
@@ -12,7 +15,7 @@ export async function saveSubscription(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { error: "Not authenticated" };
+    return { error: getDictionary(await getLocale()).errors.notAuthenticated };
   }
 
   const { error } = await supabase.from("push_subscriptions").upsert(
@@ -26,11 +29,17 @@ export async function saveSubscription(
   );
 
   if (error) {
-    return { error: error.message };
+    return { error: describeError(error, getDictionary(await getLocale())) };
   }
 }
 
-export async function deleteSubscription(endpoint: string): Promise<void> {
+export async function deleteSubscription(
+  endpoint: string,
+): Promise<{ error: string } | undefined> {
   const supabase = await createClient();
-  await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
+  const { error } = await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
+
+  if (error) {
+    return { error: describeError(error, getDictionary(await getLocale())) };
+  }
 }

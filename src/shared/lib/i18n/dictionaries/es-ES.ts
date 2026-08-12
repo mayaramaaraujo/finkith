@@ -66,6 +66,7 @@ export const esES: Dictionary = {
     },
     validation: {
       nameRequired: "El nombre de la factura es obligatorio",
+      amountInvalid: "Introduce un importe como 12,50",
       amountPositive: "Introduce un importe mayor que 0",
       categoryRequired: "Elige una categoría",
     },
@@ -81,6 +82,7 @@ export const esES: Dictionary = {
     saveChanges: "Guardar cambios",
     deleteEntry: "Eliminar ingreso",
     validation: {
+      amountInvalid: "Introduce un importe como 12,50",
       amountPositive: "Introduce un importe mayor que 0",
       dateRequired: "Elige una fecha",
       categoryRequired: "Elige una categoría",
@@ -205,5 +207,31 @@ export const esES: Dictionary = {
       Gift: "Regalo",
       Other: "Otros",
     },
+  },
+  errors: {
+    generic: "Algo ha salido mal. Inténtalo de nuevo.",
+    offline: "Parece que no tienes conexión. Compruébala e inténtalo de nuevo.",
+    notAuthenticated: "Tu sesión ha caducado. Vuelve a iniciar sesión.",
+    notInGroup: "Necesitas estar en un grupo para hacer eso.",
+    alreadyInGroup: "Ya estás en un grupo.",
+    invalidInvite: "Este enlace de invitación no es válido o ha caducado.",
+    duplicateName: "Ese nombre ya está en uso.",
+    notAllowed: "No tienes permiso para hacer eso.",
+    invalidData: "Algunos datos no son válidos. Revísalos e inténtalo de nuevo.",
+    invalidCredentials: "El correo y la contraseña no coinciden.",
+    emailNotConfirmed: "Confirma tu correo primero — busca el enlace en tu bandeja de entrada.",
+    emailAlreadyRegistered: "Ya existe una cuenta con ese correo.",
+    weakPassword: "Elige una contraseña más segura.",
+    tooManyRequests: "Demasiados intentos. Espera un minuto e inténtalo de nuevo.",
+  },
+  errorBoundary: {
+    title: "Algo ha salido mal",
+    body: "No hemos podido cargar esto. Puede ser un problema temporal.",
+    retry: "Reintentar",
+  },
+  notFound: {
+    title: "Página no encontrada",
+    body: "Esta página no existe o se ha movido.",
+    home: "Volver al inicio",
   },
 };

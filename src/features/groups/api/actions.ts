@@ -7,6 +7,9 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { getCurrentGroup } from "@/shared/lib/supabase/get-current-group";
 import { isCurrency, type Currency } from "@/shared/lib/money";
 import { createGroupSchema, type CreateGroupValues } from "@/features/groups/types";
+import { getLocale } from "@/shared/lib/i18n/server";
+import { getDictionary } from "@/shared/lib/i18n/dictionaries";
+import { describeError } from "@/shared/lib/errors";
 
 function deriveDisplayName(user: User) {
   const metaName = user.user_metadata?.full_name ?? user.user_metadata?.name;
@@ -27,7 +30,7 @@ export async function createGroup(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { error: "Not authenticated" };
+    return { error: getDictionary(await getLocale()).errors.notAuthenticated };
   }
 
   // A plain insert()+select() here would fail: groups_select requires an
@@ -41,7 +44,7 @@ export async function createGroup(
   });
 
   if (rpcError) {
-    return { error: rpcError.message };
+    return { error: describeError(rpcError, getDictionary(await getLocale())) };
   }
 
   // Not inside a try/catch in the caller: redirect() throws a special
@@ -58,7 +61,7 @@ export async function joinGroupByCode(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { error: "Not authenticated" };
+    return { error: getDictionary(await getLocale()).errors.notAuthenticated };
   }
 
   const { error } = await supabase.rpc("join_group_by_code", {
@@ -67,7 +70,7 @@ export async function joinGroupByCode(
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: describeError(error, getDictionary(await getLocale())) };
   }
 
   redirect("/home");
@@ -75,12 +78,12 @@ export async function joinGroupByCode(
 
 export async function updateGroupCurrency(currency: Currency): Promise<{ error: string } | undefined> {
   if (!isCurrency(currency)) {
-    return { error: "Invalid currency" };
+    return { error: getDictionary(await getLocale()).errors.invalidData };
   }
 
   const currentGroup = await getCurrentGroup();
   if (!currentGroup) {
-    return { error: "Not in a group" };
+    return { error: getDictionary(await getLocale()).errors.notInGroup };
   }
 
   const supabase = await createClient();
@@ -90,7 +93,7 @@ export async function updateGroupCurrency(currency: Currency): Promise<{ error: 
     .eq("id", currentGroup.groupId);
 
   if (error) {
-    return { error: error.message };
+    return { error: describeError(error, getDictionary(await getLocale())) };
   }
 
   revalidatePath("/", "layout");

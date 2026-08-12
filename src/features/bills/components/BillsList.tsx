@@ -23,6 +23,9 @@ export function BillsList({ bills, currency, categories, month }: BillsListProps
   const { dict, locale } = useTranslation();
   const [filter, setFilter] = useState<BillFilter>("all");
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
+  // Which row's last write failed, so the message appears against that bill
+  // rather than somewhere the user has to go looking for it.
+  const [failed, setFailed] = useState<{ billId: string; message: string } | null>(null);
 
   const colorsByCategory = colorsByCategoryName(categories);
   function categoryDotClass(category: string) {
@@ -59,12 +62,18 @@ export function BillsList({ bills, currency, categories, month }: BillsListProps
       <div className="mt-3 flex flex-col gap-2">
         {visible.map((bill) => {
           const dueInfo = getBillDueInfo(bill);
+          const error = failed?.billId === bill.id ? failed.message : null;
           return (
             <div
               key={bill.id}
-              className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-1 p-3.5"
+              className="rounded-lg border border-surface-border bg-surface-1 p-3.5"
             >
-              <PaidToggle bill={bill} month={month} />
+            <div className="flex items-center gap-3">
+              <PaidToggle
+                bill={bill}
+                month={month}
+                onError={(message) => setFailed(message ? { billId: bill.id, message } : null)}
+              />
               <button
                 type="button"
                 onClick={() => setEditingBillId(bill.id)}
@@ -99,6 +108,12 @@ export function BillsList({ bills, currency, categories, month }: BillsListProps
               >
                 {formatMoney(bill.amount, currency, locale)}
               </span>
+            </div>
+            {error ? (
+              <p role="alert" className="mt-2 text-xs font-medium text-danger">
+                {error}
+              </p>
+            ) : null}
             </div>
           );
         })}

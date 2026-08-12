@@ -4,6 +4,7 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { GROUP_MEMBER_COLUMNS, mapGroupMemberRow } from "@/features/groups/lib";
 import { CATEGORY_COLUMNS, mapCategoryRow } from "@/features/categories/lib";
 import { AppChrome } from "./_components/AppChrome";
+import { unwrap } from "@/shared/lib/supabase/unwrap";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const currentGroup = await getCurrentGroup();
@@ -13,7 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const supabase = await createClient();
-  const [{ data: memberRows }, { data: categoryRows }] = await Promise.all([
+  const [membersRes, categoriesRes] = await Promise.all([
     supabase
       .from("group_members")
       .select(GROUP_MEMBER_COLUMNS)
@@ -23,8 +24,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     supabase.from("categories").select(CATEGORY_COLUMNS).eq("group_id", currentGroup.groupId),
   ]);
 
-  const members = (memberRows ?? []).map(mapGroupMemberRow);
-  const categories = (categoryRows ?? []).map(mapCategoryRow);
+  const members = (unwrap(membersRes, "layout members") ?? []).map(mapGroupMemberRow);
+  const categories = (unwrap(categoriesRes, "layout categories") ?? []).map(mapCategoryRow);
 
   return (
     <AppChrome

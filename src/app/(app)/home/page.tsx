@@ -18,6 +18,7 @@ import { ActivitySection } from "@/features/dashboard/components/ActivitySection
 import { getLocale } from "@/shared/lib/i18n/server";
 import { getDictionary } from "@/shared/lib/i18n/dictionaries";
 import { LOCALE_INTL_TAG } from "@/shared/lib/i18n/config";
+import { unwrap } from "@/shared/lib/supabase/unwrap";
 
 function monthRange(month: string) {
   const [year, monthNum] = month.split("-").map(Number);
@@ -75,9 +76,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     supabase.from("categories").select(CATEGORY_COLUMNS).eq("group_id", currentGroup.groupId),
   ]);
 
-  const members = (membersRes.data ?? []).map(mapGroupMemberRow);
+  const members = (unwrap(membersRes, "home members") ?? []).map(mapGroupMemberRow);
 
-  const entries: IncomeEntry[] = (entriesRes.data ?? []).map((row) => ({
+  const entries: IncomeEntry[] = (unwrap(entriesRes, "home income") ?? []).map((row) => ({
     id: row.id,
     groupId: row.group_id,
     memberId: row.member_id,
@@ -88,7 +89,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     createdAt: row.created_at,
   }));
 
-  const bills: Bill[] = (billsRes.data ?? []).map((row) => ({
+  const bills: Bill[] = (unwrap(billsRes, "home bills") ?? []).map((row) => ({
     id: row.id,
     groupId: row.group_id,
     name: row.name,
@@ -103,9 +104,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     createdAt: row.created_at,
   }));
 
-  const categories = (categoriesRes.data ?? []).map(mapCategoryRow);
+  const categories = (unwrap(categoriesRes, "home categories") ?? []).map(mapCategoryRow);
 
-  const hasAnyActivity = (anyEntriesRes.count ?? 0) > 0 || bills.length > 0;
+  const anyEntries = unwrap({ data: anyEntriesRes.count, error: anyEntriesRes.error }, "home income count");
+  const hasAnyActivity = (anyEntries ?? 0) > 0 || bills.length > 0;
 
   const hero = computeHero(entries, bills, month, members.length, dict);
   const memberStrip = computeMemberStrip(members, entries);

@@ -1,5 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "./server";
+import { unwrap } from "./unwrap";
 import { DEFAULT_CURRENCY, isCurrency, type Currency } from "@/shared/lib/money";
 
 export type CurrentGroup = {
@@ -22,12 +23,21 @@ export async function getCurrentGroup(knownUser?: User): Promise<CurrentGroup | 
 
   if (!user) return null;
 
-  const { data } = await supabase
-    .from("group_members")
-    .select("id, role, groups(id, name, currency)")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
+  // Not `const { data }`: a failed query would look exactly like "this user has
+  // no group", and every caller answers that by redirecting to /setup — where
+  // create_group_with_owner would happily give them a *second* active
+  // membership, which `maybeSingle()` above then rejects on every later load.
+  // A transient outage would leave the account permanently wedged, so the
+  // failure has to be told apart from the empty answer.
+  const data = unwrap(
+    await supabase
+      .from("group_members")
+      .select("id, role, groups(id, name, currency)")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle(),
+    "current group",
+  );
 
   if (!data || !data.groups) return null;
 

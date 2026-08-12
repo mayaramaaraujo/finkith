@@ -11,19 +11,32 @@ interface PaidToggleProps {
   bill: Bill;
   /** The `YYYY-MM` being viewed — the cycle this toggle marks paid. */
   month: string;
+  /**
+   * Reports a failed write to the row, which owns the space to show it — the
+   * toggle itself is a 24px checkbox with nowhere to put a sentence.
+   */
+  onError: (message: string | null) => void;
 }
 
-export function PaidToggle({ bill, month }: PaidToggleProps) {
+export function PaidToggle({ bill, month, onError }: PaidToggleProps) {
   const { dict } = useTranslation();
   const [isPending, startTransition] = useTransition();
   const isPaid = isPaidInCycle(bill, month);
+
+  function toggle() {
+    startTransition(async () => {
+      onError(null);
+      const result = await toggleBillPaid(bill.id, !isPaid, month);
+      if (result?.error) onError(result.error);
+    });
+  }
 
   return (
     <button
       type="button"
       aria-label={isPaid ? dict.bills.markUnpaid : dict.bills.markPaid}
       disabled={isPending}
-      onClick={() => startTransition(() => toggleBillPaid(bill.id, !isPaid, month))}
+      onClick={toggle}
       className={`flex size-6 shrink-0 items-center justify-center rounded-xs border transition-colors disabled:opacity-50 ${
         isPaid ? "border-positive bg-positive text-white" : "border-surface-4 bg-transparent text-transparent"
       }`}

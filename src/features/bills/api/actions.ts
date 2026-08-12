@@ -5,6 +5,9 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { getCurrentGroup } from "@/shared/lib/supabase/get-current-group";
 import { billSchema, cycleMonthSchema, type BillValues } from "@/features/bills/types";
 import { paidAtFor } from "@/features/bills/lib";
+import { getLocale } from "@/shared/lib/i18n/server";
+import { getDictionary } from "@/shared/lib/i18n/dictionaries";
+import { describeError } from "@/shared/lib/errors";
 
 function revalidateBills() {
   revalidatePath("/bills");
@@ -25,7 +28,7 @@ export async function addBill(
 
   const currentGroup = await getCurrentGroup();
   if (!currentGroup) {
-    return { error: "Not in a group" };
+    return { error: getDictionary(await getLocale()).errors.notInGroup };
   }
 
   const supabase = await createClient();
@@ -43,7 +46,7 @@ export async function addBill(
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: describeError(error, getDictionary(await getLocale())) };
   }
 
   revalidateBills();
@@ -74,7 +77,7 @@ export async function updateBill(
     .eq("id", billId);
 
   if (error) {
-    return { error: error.message };
+    return { error: describeError(error, getDictionary(await getLocale())) };
   }
 
   revalidateBills();
@@ -85,7 +88,7 @@ export async function deleteBill(billId: string): Promise<{ error: string } | un
   const { error } = await supabase.from("bills").delete().eq("id", billId);
 
   if (error) {
-    return { error: error.message };
+    return { error: describeError(error, getDictionary(await getLocale())) };
   }
 
   revalidateBills();
@@ -95,14 +98,18 @@ export async function toggleBillPaid(
   billId: string,
   paid: boolean,
   cycleMonth: string,
-): Promise<void> {
+): Promise<{ error: string } | undefined> {
   const month = cycleMonthSchema.parse(cycleMonth);
 
   const supabase = await createClient();
-  await supabase
+  const { error } = await supabase
     .from("bills")
     .update({ paid, paid_at: paid ? paidAtFor(month) : null })
     .eq("id", billId);
+
+  if (error) {
+    return { error: describeError(error, getDictionary(await getLocale())) };
+  }
 
   revalidateBills();
 }

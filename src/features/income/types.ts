@@ -34,21 +34,26 @@ function incomeFields(dict: Dictionary) {
 /**
  * Form schema. `amount` arrives as whatever the user typed in their own number
  * format, so it's parsed here rather than coerced — `Number("1.234,56")` is
- * NaN, and the message for that would be zod's built-in English one. The
- * explicit `error` covers NaN so an unparseable amount reads the same as a
- * non-positive one.
+ * NaN, and the message for that would be zod's built-in English one.
+ *
+ * The two ways an amount can be wrong are reported separately: text that isn't
+ * a number at all can't be described as "greater than 0" without leaving the
+ * reader to guess what's wrong with what they typed.
  */
 export function createAddIncomeFormSchema(dict: Dictionary, locale: Locale) {
   return z.object({
     ...incomeFields(dict),
     amount: z
       .string()
-      .transform((raw) => parseMoney(raw, locale) ?? NaN)
-      .pipe(
-        z
-          .number({ error: dict.income.validation.amountPositive })
-          .positive(dict.income.validation.amountPositive),
-      ),
+      .transform((raw, ctx) => {
+        const parsed = parseMoney(raw, locale);
+        if (parsed === null) {
+          ctx.addIssue({ code: "custom", message: dict.income.validation.amountInvalid });
+          return z.NEVER;
+        }
+        return parsed;
+      })
+      .pipe(z.number().positive(dict.income.validation.amountPositive)),
   });
 }
 

@@ -17,6 +17,7 @@ import { getDictionary } from "@/shared/lib/i18n/dictionaries";
 import { LOCALE_INTL_TAG } from "@/shared/lib/i18n/config";
 import type { DefaultIncomeCategory } from "@/features/income/types";
 import { CATEGORY_COLUMNS, mapCategoryRow, colorsByCategoryName } from "@/features/categories/lib";
+import { unwrap } from "@/shared/lib/supabase/unwrap";
 
 interface HistoryPageProps {
   searchParams: Promise<{ month?: string }>;
@@ -42,7 +43,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   const rangeEnd = new Date(Date.UTC(rangeEndYear, rangeEndMonth, 1)).toISOString().slice(0, 10);
 
   const supabase = await createClient();
-  const [{ data }, { data: categoryRows }] = await Promise.all([
+  const [entriesRes, categoriesRes] = await Promise.all([
     supabase
       .from("income_entries")
       .select("category, amount, entry_date")
@@ -56,12 +57,12 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
       .eq("type", "income"),
   ]);
 
-  const entries: MonthEntry[] = (data ?? []).map((row) => ({
+  const entries: MonthEntry[] = (unwrap(entriesRes, "history income") ?? []).map((row) => ({
     category: row.category,
     amount: Number(row.amount),
     entryDate: row.entry_date,
   }));
-  const categories = (categoryRows ?? []).map(mapCategoryRow);
+  const categories = (unwrap(categoriesRes, "history categories") ?? []).map(mapCategoryRow);
 
   const trend = computeTrend(entries, months, month, intlLocale);
   const categoryBreakdown = computeCategoryBreakdown(entries, month, colorsByCategoryName(categories));

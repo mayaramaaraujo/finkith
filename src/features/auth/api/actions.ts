@@ -2,6 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/shared/lib/supabase/server";
+import { getLocale } from "@/shared/lib/i18n/server";
+import { getDictionary } from "@/shared/lib/i18n/dictionaries";
+import { describeError } from "@/shared/lib/errors";
 
 export async function logout() {
   const supabase = await createClient();
@@ -14,7 +17,7 @@ export async function deleteAccount(): Promise<{ error: string } | undefined> {
   const { error } = await supabase.rpc("delete_own_account");
 
   if (error) {
-    return { error: error.message };
+    return { error: describeError(error, getDictionary(await getLocale())) };
   }
 
   // The user's auth session may already be invalidated server-side by the

@@ -50,12 +50,15 @@ export function createBillFormSchema(dict: Dictionary, locale: Locale) {
     ...billFields(dict),
     amount: z
       .string()
-      .transform((raw) => parseMoney(raw, locale) ?? NaN)
-      .pipe(
-        z
-          .number({ error: dict.bills.validation.amountPositive })
-          .positive(dict.bills.validation.amountPositive),
-      ),
+      .transform((raw, ctx) => {
+        const parsed = parseMoney(raw, locale);
+        if (parsed === null) {
+          ctx.addIssue({ code: "custom", message: dict.bills.validation.amountInvalid });
+          return z.NEVER;
+        }
+        return parsed;
+      })
+      .pipe(z.number().positive(dict.bills.validation.amountPositive)),
   });
 }
 
