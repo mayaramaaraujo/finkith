@@ -68,7 +68,26 @@ describe("parseMoney", () => {
     // separator would read it as 123456 — a 100x error, saved without warning.
     assert.equal(parseMoney("1.234.56", "es-ES"), null);
     assert.equal(parseMoney("12,34,56", "en"), null);
-    assert.equal(parseMoney("1,23", "en"), null);
+  });
+
+  it("reads the other convention's decimal mark when its own can't apply", () => {
+    // The phone keyboard follows the device language, not the app's: reading
+    // the app in English on a Brazilian phone offers a "," key and no "." at
+    // all, so "43,95" is the only way to type cents. It can't mean 4395 —
+    // a group separator has to be followed by three digits.
+    assert.equal(parseMoney("43,95", "en"), 43.95);
+    assert.equal(parseMoney("1.234,56", "en"), 1234.56);
+    assert.equal(parseMoney("43.95", "pt-BR"), 43.95);
+    assert.equal(parseMoney("1,234.56", "es-ES"), 1234.56);
+  });
+
+  it("lets the reader's own format settle anything ambiguous", () => {
+    // "1,234" is a valid grouping in English and a valid decimal in Spanish,
+    // so neither reading is a guess — the locale decides, as it did before.
+    assert.equal(parseMoney("1,234", "en"), 1234);
+    assert.equal(parseMoney("1,234", "es-ES"), 1.234);
+    assert.equal(parseMoney("1.234", "en"), 1.234);
+    assert.equal(parseMoney("1.234", "pt-BR"), 1234);
   });
 });
 

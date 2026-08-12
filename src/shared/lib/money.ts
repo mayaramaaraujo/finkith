@@ -101,26 +101,17 @@ export function formatAmountForInput(amount: number, locale: Locale): string {
 }
 
 /**
- * Reads an amount the user typed in their own number format — "1.234,56" in
- * Spain and Brazil, "1,234.56" in English. Returns null when it isn't a
- * number, so the caller can raise a translated error.
- *
- * Separators are read back out of Intl rather than hardcoded, so this keeps
- * working for locales that group with a non-breaking space (French, Polish).
+ * The other convention in common use, keyed by the reader's own decimal mark.
+ * Only "." and "," have a counterpart worth guessing at; a locale that groups
+ * with a space gets no entry and no second attempt.
  */
-export function parseMoney(input: string, locale: Locale): number | null {
-  const parts = new Intl.NumberFormat(LOCALE_INTL_TAG[locale]).formatToParts(12345.6);
-  // Locales that group with a non-breaking space are typed with a plain one.
-  const normalizeSpaces = (value: string) => value.replace(/[  \s]/g, " ");
-  const group = normalizeSpaces(parts.find((part) => part.type === "group")?.value ?? ",");
-  const decimal = parts.find((part) => part.type === "decimal")?.value ?? ".";
+const ALTERNATE_SEPARATORS: Record<string, { group: string; decimal: string }> = {
+  ".": { group: ".", decimal: "," },
+  ",": { group: ",", decimal: "." },
+};
 
-  const trimmed = normalizeSpaces(input).trim();
-  if (trimmed === "") return null;
-
-  const negative = trimmed.startsWith("-");
-  const unsigned = negative ? trimmed.slice(1) : trimmed;
-
+/** One attempt at reading an unsigned amount under a given pair of separators. */
+function readAmount(unsigned: string, group: string, decimal: string): number | null {
   const [integer, fraction, ...extra] = unsigned.split(decimal);
   if (extra.length > 0) return null;
   if (fraction !== undefined && !/^\d+$/.test(fraction)) return null;
@@ -136,6 +127,42 @@ export function parseMoney(input: string, locale: Locale): number | null {
     if (rest.some((chunk) => chunk.length !== 3)) return null;
   }
 
-  const value = Number(`${negative ? "-" : ""}${digits}.${fraction ?? "0"}`);
+  const value = Number(`${digits}.${fraction ?? "0"}`);
   return Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Reads an amount the user typed in their own number format — "1.234,56" in
+ * Spain and Brazil, "1,234.56" in English. Returns null when it isn't a
+ * number, so the caller can raise a translated error.
+ *
+ * Separators are read back out of Intl rather than hardcoded, so this keeps
+ * working for locales that group with a non-breaking space (French, Polish).
+ *
+ * The reader's own format is tried first, so anything genuinely ambiguous is
+ * settled by their locale: "1,234" is 1234 in English and 1.234 in Spanish.
+ * Only when that reading is impossible is the other convention tried, because
+ * the app's language and the phone's keyboard need not agree — running in
+ * English on a Brazilian phone offers a "," key and no "." at all, which
+ * leaves "43,95" as the only way that reader can type an amount with cents.
+ */
+export function parseMoney(input: string, locale: Locale): number | null {
+  const parts = new Intl.NumberFormat(LOCALE_INTL_TAG[locale]).formatToParts(12345.6);
+  const normalizeSpaces = (value: string) => value.replace(/[  \s]/g, " ");
+  const group = normalizeSpaces(parts.find((part) => part.type === "group")?.value ?? ",");
+  const decimal = parts.find((part) => part.type === "decimal")?.value ?? ".";
+
+  const trimmed = normalizeSpaces(input).trim();
+  if (trimmed === "") return null;
+
+  const negative = trimmed.startsWith("-");
+  const unsigned = negative ? trimmed.slice(1) : trimmed;
+
+  const alternate = ALTERNATE_SEPARATORS[decimal];
+  const value =
+    readAmount(unsigned, group, decimal) ??
+    (alternate ? readAmount(unsigned, alternate.group, alternate.decimal) : null);
+
+  if (value === null) return null;
+  return negative ? -value : value;
 }
