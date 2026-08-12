@@ -21,6 +21,7 @@ Each major implementation has its own writeup in `docs/`:
 - **Structure**: feature-based under `src/features/*` (`auth`, `groups`, `income`, `bills`, `dashboard`, `history`), each with `components/`, `hooks/`, `api/`, and a shared constants/types file. Cross-feature primitives live in `src/shared/*`.
 - **Backend**: Supabase — auth wired up (`src/shared/lib/supabase/`, `proxy.ts`, `src/app/auth/callback/`); data model (`groups`, `group_members`, `income_entries`, `bills`, all RLS-scoped to group membership) built, see `supabase/migrations/`
 - **Deploy**: Vercel (planned)
+- **Marketing/SEO**: `/` is the public landing page (`src/app/page.tsx` + `src/features/landing/`), serving whichever of the three languages the visitor asks for and redirecting signed-in visitors to `/home` or `/setup`. Each language also has its own indexable URL — `/en`, `/pt-BR`, `/es-ES` (`src/app/[lang]/page.tsx`) — cross-linked with `hreflang` alternates and listed in the sitemap, with `/` as `x-default`. It ships Schema.org JSON-LD, a generated Open Graph card (`src/app/opengraph-image.tsx`), `robots.ts` and `sitemap.ts`. All absolute URLs come from `NEXT_PUBLIC_SITE_URL` via `src/shared/lib/site.ts`, so that env var has to be set in production.
 - **PWA**: manifest (`src/app/manifest.ts`) + generated icons (`src/app/icon.tsx`, `apple-icon.tsx`, `icon-192/`, `icon-512/`, built via `next/og` from the shared `src/shared/lib/logo.tsx` mark) + `appleWebApp`/`viewport` metadata in the root layout
 
 ## Roadmap
@@ -31,7 +32,8 @@ Each major implementation has its own writeup in `docs/`:
 4. ~~Screens: Group setup → Home / Bills / History / People~~ (done)
 5. ~~Supabase data model (groups, members, income, bills)~~ (done)
 6. ~~PWA manifest + installable icons~~ (done)
-7. Vercel deploy
-8. Join-via-invite-link flow (accepting an `invited_email` member row once that person signs up)
+7. ~~Public landing page at `/` with SEO metadata, JSON-LD, sitemap and robots~~ (done)
+8. Vercel deploy
+9. Join-via-invite-link flow (accepting an `invited_email` member row once that person signs up)
 
 Update this file whenever a branch changes architecture, features, or this roadmap.

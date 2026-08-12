@@ -1,3 +1,4 @@
+import type { User } from "@supabase/supabase-js";
 import { createClient } from "./server";
 import { DEFAULT_CURRENCY, isCurrency, type Currency } from "@/shared/lib/money";
 
@@ -9,12 +10,15 @@ export type CurrentGroup = {
   currency: Currency;
 };
 
-export async function getCurrentGroup(): Promise<CurrentGroup | null> {
+/**
+ * Pass `knownUser` when the caller has already resolved the session — every
+ * `getUser()` is a round trip to the Auth server, and a page that redirects on
+ * the result would otherwise pay for it twice.
+ */
+export async function getCurrentGroup(knownUser?: User): Promise<CurrentGroup | null> {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = knownUser ?? (await supabase.auth.getUser()).data.user;
 
   if (!user) return null;
 

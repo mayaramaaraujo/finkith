@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Sora, Manrope } from "next/font/google";
 import { LOCALE_INTL_TAG } from "@/shared/lib/i18n/config";
+import { SITE_NAME, SITE_URL } from "@/shared/lib/site";
 import { getLocale } from "@/shared/lib/i18n/server";
 import { I18nProvider } from "@/shared/lib/i18n/context";
 import "./globals.css";
@@ -18,9 +19,13 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Finkith",
+  // Lets every page below express canonical/OG URLs as relative paths.
+  metadataBase: new URL(SITE_URL),
+  // Every page that needs a distinct title already spells out its own, suffix
+  // included (`Sign in — Finkith`), so there's no template to apply here.
+  title: SITE_NAME,
   description: "Track what everyone brings in and what's owed. One shared picture, every month.",
-  applicationName: "Finkith",
+  applicationName: SITE_NAME,
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

@@ -4,6 +4,7 @@ Design-system primitives shared across features, built on the tokens in `src/app
 
 - **Avatar** — circular initials badge, cycles through the app's 6-color avatar palette (`colorIndex` 0–5)
 - **Button** — `primary` / `secondary` / `outline` / `danger` variants, `sm` / `md` sizes
+- **LinkButton** — a `next/link` that looks like a `Button`, sharing its variant/size classes. Use it for navigations (CTAs, "Sign in") instead of restyling a link by hand; `Button` is `"use client"` and renders a real `<button>`, so it can't be a link
 - **Input** — text input with optional leading icon, `leadingText`, or `trailingText` (currency symbols follow the amount in some locales — ask `formatMoneyParts().symbolFirst` which side to use), `invalid` state
 - **Select** — compact native `<select>` styled to match the design tokens (e.g. Settings' Language/Currency rows), value/onChange over a `{ value, label }[]` options list
 - **DatePicker** — calendar-popup date field (built on `react-datepicker`), value/onChange in `YYYY-MM-DD`, opens a full-screen portal calendar instead of the native OS date input

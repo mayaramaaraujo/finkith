@@ -1,12 +1,22 @@
-import { redirect } from "next/navigation";
-import { getCurrentGroup } from "@/shared/lib/supabase/get-current-group";
+import type { Metadata, Viewport } from "next";
+import { getLocale } from "@/shared/lib/i18n/server";
+import { landingMetadata } from "@/features/landing/metadata";
+import { LandingPage } from "@/features/landing/components/LandingPage";
 
-export default async function RootPage() {
-  const currentGroup = await getCurrentGroup();
+export async function generateMetadata(): Promise<Metadata> {
+  return landingMetadata(await getLocale(), "/");
+}
 
-  if (!currentGroup) {
-    redirect("/setup");
-  }
+/**
+ * The app's own layout locks zoom for a native-app feel; a public page that
+ * search engines and screen readers visit has to allow it.
+ */
+export const viewport: Viewport = {
+  maximumScale: 5,
+  userScalable: true,
+};
 
-  redirect("/home");
+/** `/` shows whichever language the visitor asked for; `/{locale}` pins one. */
+export default async function RootLandingPage() {
+  return <LandingPage locale={await getLocale()} />;
 }

@@ -10,6 +10,9 @@ const AVATAR_GRADIENT_CLASSES = [
 /** Index into the app's 6-color cycling avatar palette (defined in globals.css). */
 export type AvatarColorIndex = 0 | 1 | 2 | 3 | 4 | 5;
 
+/** Cycle length for callers colouring a list: `(i % AVATAR_COLOR_COUNT)`. */
+export const AVATAR_COLOR_COUNT = AVATAR_GRADIENT_CLASSES.length;
+
 const SIZE_CLASSES = {
   sm: "size-6 text-xs",
   md: "size-8 text-xs",
