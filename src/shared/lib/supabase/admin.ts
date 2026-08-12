@@ -7,7 +7,7 @@ let adminClient: ReturnType<typeof createSupabaseClient<Database>> | undefined;
 // bill-reminders cron) and must read/write across every group, bypassing
 // RLS. Built lazily so a missing SUPABASE_SERVICE_ROLE_KEY only breaks the
 // cron route that actually needs it, not every server action sharing this
-// module — same reasoning as getResendClient() in shared/lib/resend.ts.
+// module.
 export function getAdminClient() {
   adminClient ??= createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

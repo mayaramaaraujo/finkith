@@ -6,11 +6,10 @@ export type GroupMember = {
   id: string;
   groupId: string;
   userId: string | null;
-  invitedEmail: string | null;
   displayName: string;
   role: "admin" | "member";
   colorIndex: number;
-  status: "active" | "invited";
+  status: "active";
   createdAt: string;
 };
 

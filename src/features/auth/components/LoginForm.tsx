@@ -65,10 +65,6 @@ export function LoginForm({ next }: LoginFormProps) {
         <p className="mt-2 text-xs font-medium text-danger">{errors.root.message}</p>
       ) : null}
 
-      <p className="mt-2 text-right text-xs font-semibold text-primary-light">
-        {dict.auth.forgotPassword}
-      </p>
-
       <Button type="submit" fullWidth disabled={isSubmitting} className="mt-4">
         {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
         {dict.auth.signIn}

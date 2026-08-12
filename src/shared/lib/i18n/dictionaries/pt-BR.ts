@@ -96,8 +96,6 @@ export const ptBR: Dictionary = {
   settings: {
     members: "Membros",
     you: "VOCÊ",
-    invited: "Convidado",
-    invitationSent: "Convite enviado",
     thisMonth: (amount: string) => `${amount} este mês`,
     admin: "Admin",
     member: "Membro",
@@ -141,7 +139,6 @@ export const ptBR: Dictionary = {
     emailPlaceholder: "voce@email.com",
     passwordPlaceholder: "••••••••",
     namePlaceholder: "Seu nome",
-    forgotPassword: "Esqueceu a senha?",
     signIn: "Entrar",
     signUp: "Cadastrar",
     createAccount: "Criar conta",

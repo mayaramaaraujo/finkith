@@ -94,8 +94,6 @@ export const en = {
   settings: {
     members: "Members",
     you: "YOU",
-    invited: "Invited",
-    invitationSent: "Invitation sent",
     thisMonth: (amount: string) => `${amount} this month`,
     admin: "Admin",
     member: "Member",
@@ -139,7 +137,6 @@ export const en = {
     emailPlaceholder: "you@email.com",
     passwordPlaceholder: "••••••••",
     namePlaceholder: "Your name",
-    forgotPassword: "Forgot password?",
     signIn: "Sign in",
     signUp: "Sign up",
     createAccount: "Create account",

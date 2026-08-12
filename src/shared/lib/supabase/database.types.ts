@@ -169,7 +169,6 @@ export type Database = {
           display_name: string
           group_id: string
           id: string
-          invited_email: string | null
           role: string
           status: string
           user_id: string | null
@@ -180,7 +179,6 @@ export type Database = {
           display_name: string
           group_id: string
           id?: string
-          invited_email?: string | null
           role?: string
           status?: string
           user_id?: string | null
@@ -191,7 +189,6 @@ export type Database = {
           display_name?: string
           group_id?: string
           id?: string
-          invited_email?: string | null
           role?: string
           status?: string
           user_id?: string | null

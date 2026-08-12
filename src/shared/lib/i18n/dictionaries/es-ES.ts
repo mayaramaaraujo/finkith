@@ -96,8 +96,6 @@ export const esES: Dictionary = {
   settings: {
     members: "Miembros",
     you: "TÚ",
-    invited: "Invitado",
-    invitationSent: "Invitación enviada",
     thisMonth: (amount: string) => `${amount} este mes`,
     admin: "Admin",
     member: "Miembro",
@@ -141,7 +139,6 @@ export const esES: Dictionary = {
     emailPlaceholder: "tu@email.com",
     passwordPlaceholder: "••••••••",
     namePlaceholder: "Tu nombre",
-    forgotPassword: "¿Has olvidado la contraseña?",
     signIn: "Iniciar sesión",
     signUp: "Registrarse",
     createAccount: "Crear cuenta",

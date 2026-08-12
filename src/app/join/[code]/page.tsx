@@ -1,20 +1,11 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCurrentGroup } from "@/shared/lib/supabase/get-current-group";
 import { createClient } from "@/shared/lib/supabase/server";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import { JoinGroupCard } from "@/features/groups/components/JoinGroupCard";
 import { getLocale } from "@/shared/lib/i18n/server";
 import { getDictionary } from "@/shared/lib/i18n/dictionaries";
-
-// Mirrors shared/components/Button's primary/outline + md-size classes —
-// can't reuse Button directly since it renders a <button>, and nesting a
-// <button> inside this page's <Link> (an <a>) would be invalid HTML
-// (interactive content inside interactive content).
-const LINK_BUTTON_BASE =
-  "flex h-14 w-full items-center justify-center rounded-lg px-5 font-display text-sm font-semibold";
-const LINK_BUTTON_PRIMARY = `${LINK_BUTTON_BASE} bg-gradient-to-br from-primary to-primary-dark text-text-primary shadow-glow-primary`;
-const LINK_BUTTON_OUTLINE = `${LINK_BUTTON_BASE} border border-surface-border bg-surface-2 text-text-primary`;
+import { LinkButton } from "@/shared/components/LinkButton";
 
 interface JoinPageProps {
   params: Promise<{ code: string }>;
@@ -39,9 +30,9 @@ export default async function JoinPage({ params }: JoinPageProps) {
   if (!group) {
     return (
       <AuthShell title={dict.join.notFoundTitle} subtitle={dict.join.notFoundSubtitle} termsNotice={dict.auth.termsNotice}>
-        <Link href="/login" className={`${LINK_BUTTON_PRIMARY} mt-2`}>
+        <LinkButton href="/login" className="mt-2 w-full">
           {dict.join.backToSignIn}
-        </Link>
+        </LinkButton>
       </AuthShell>
     );
   }
@@ -54,12 +45,12 @@ export default async function JoinPage({ params }: JoinPageProps) {
         termsNotice={dict.auth.termsNotice}
       >
         <div className="flex flex-col gap-3">
-          <Link href={`/login?next=/join/${code}`} className={LINK_BUTTON_PRIMARY}>
+          <LinkButton href={`/login?next=/join/${code}`} className="w-full">
             {dict.join.signIn}
-          </Link>
-          <Link href={`/signup?next=/join/${code}`} className={LINK_BUTTON_OUTLINE}>
+          </LinkButton>
+          <LinkButton href={`/signup?next=/join/${code}`} variant="outline" className="w-full">
             {dict.join.createAccount}
-          </Link>
+          </LinkButton>
         </div>
       </AuthShell>
     );

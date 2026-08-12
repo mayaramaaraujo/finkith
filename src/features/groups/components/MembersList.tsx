@@ -19,14 +19,11 @@ interface MembersListProps {
 }
 
 function roleLabel(member: GroupMember, dict: Dictionary) {
-  if (member.status === "invited") return dict.settings.invited;
   return member.role === "admin" ? dict.settings.admin : dict.settings.member;
 }
 
-function roleColorClass(member: GroupMember, isYou: boolean) {
-  if (member.status === "invited") return "text-text-subtle";
-  if (isYou) return "text-primary-light";
-  return "text-neutral-accent";
+function roleColorClass(isYou: boolean) {
+  return isYou ? "text-primary-light" : "text-neutral-accent";
 }
 
 export function MembersList({ rows, dict, currency, locale }: MembersListProps) {
@@ -43,7 +40,6 @@ export function MembersList({ rows, dict, currency, locale }: MembersListProps) 
               initials={getInitials(member.displayName)}
               colorIndex={member.colorIndex as AvatarColorIndex}
               size="lg"
-              className={member.status === "invited" ? "opacity-55" : ""}
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
@@ -57,12 +53,10 @@ export function MembersList({ rows, dict, currency, locale }: MembersListProps) 
                 ) : null}
               </div>
               <p className="mt-0.5 text-xs text-text-subtle">
-                {member.status === "invited"
-                  ? dict.settings.invitationSent
-                  : dict.settings.thisMonth(formatMoney(monthTotal, currency, locale))}
+                {dict.settings.thisMonth(formatMoney(monthTotal, currency, locale))}
               </p>
             </div>
-            <span className={`shrink-0 text-xs font-semibold ${roleColorClass(member, isYou)}`}>
+            <span className={`shrink-0 text-xs font-semibold ${roleColorClass(isYou)}`}>
               {roleLabel(member, dict)}
             </span>
           </div>
