@@ -49,7 +49,7 @@ The web app is largely AI-generated and mostly coherent. The review found eleven
 | 1 | `computeHero` counted "bills paid" from the raw `paid` column while the Bills screen used the per-cycle derivation, so a repeating bill paid in any past month inflated **Available today** every month after. `buildBillActivity` had the same mistake in its paid/pending label. | A single `isPaidInCycle(bill, month)` in `src/features/bills/lib.ts` is the only way any screen asks whether a bill is paid. Covered by `lib.test.ts`. |
 | 2 | `toggleBillPaid` always wrote `paid_at = now()`, so ticking a bill while viewing August marked it paid for the current month; the edit sheet's Paid switch showed the raw flag, so a bill paid in June looked paid in July. | The viewed month is threaded into the sheet, the toggle and the actions. `paidAtFor(month)` writes a timestamp inside that month (midday on the 15th for past months, so it stays in-month in every timezone), and the switch reflects `isPaidInCycle` for the month on screen. |
 | 3 | `addBill` never set `cycle_month`, so a one-off bill added while viewing another month landed in the current one and vanished from the screen that created it. | `addBill`/`updateBill` take the viewed month and set `cycle_month` explicitly, validated against the same `^\d{4}-\d{2}$` shape as the DB constraint. |
-| 4 | Invite-by-email was half-built: `group_members.invited_email`, `status = 'invited'`, an RLS insert policy existing only for it, `resend.ts`, the `resend` dependency, and unreachable "Invited" branches in the members list. | Removed. Migration `0011_drop_email_invites.sql` drops the column, the dead status value and the insert policy — no insert policy replaces it, since both membership paths are security-definer RPCs that bypass RLS. Invites are link-only. |
+| 4 | Invite-by-email was half-built: `group_members.invited_email`, `status = 'invited'`, an RLS insert policy existing only for it, `resend.ts`, the `resend` dependency, and unreachable "Invited" branches in the members list. | Removed from the client, and migration `0011_drop_email_invites.sql` drops the column, the dead status value and the insert policy. **The migration is recorded as applied on the linked project but its effects are not present there — see §5.1.** No client reads the column either way, so nothing is broken; the schema simply still carries it. |
 | 5 | "Forgot password" was static text with no handler. | The dead affordance is gone. **The RN app should implement the real flow** (`auth.resetPasswordForEmail` + a deep-linked reset screen) rather than reinstate the text. |
 | 9 | The cron inserted into `bill_reminders_sent` before sending, so a failed send — or a user with no subscription yet — suppressed that reminder for the rest of the cycle. | The row is still claimed first (it is what enforces at-most-once), but released again when nothing was delivered, so the next daily run retries. |
 
@@ -113,9 +113,28 @@ Port the tokens from `src/app/globals.css` exactly. The app is **dark-only** —
 
 ---
 
-## 5. Database schema (unchanged)
+## 5. Database schema
 
-All tables are in `public`, all have RLS enabled, all financial tables are scoped by `group_id` through `public.is_active_group_member(group_id)`.
+The RN app inherits this schema unchanged — same tables, same policies, same RPCs. All tables are in `public`, all have RLS enabled, and all financial tables are scoped by `group_id` through `public.is_active_group_member(group_id)`.
+
+Read §5.1 first: what is deployed and what the migrations say are not currently the same thing.
+
+### 5.1 The deployed schema does not match the migrations
+
+Verified against the linked project (`xfqfrqqbhudoiyijlyyl`) by querying the live REST API — **not** from the migration files, which disagree with it in two ways. Reconcile both before the RN app generates its types, or the generated types will describe a schema no migration explains.
+
+**1. `0011_drop_email_invites.sql` is recorded as applied but did not take effect.** `supabase migration list` shows `0011` on both local and remote, yet `GET /rest/v1/group_members?select=invited_email` returns `200 [{"invited_email":null}]` — the column is still there, and by implication so are the `'invited'` status value and the `group_members_insert` policy the migration drops. Nothing is broken by this: no query selects the column, and `0010` had already narrowed that policy to placeholder rows only. But the migration history is lying, so re-run it (`supabase migration repair --status reverted 0011` then `supabase db push`) and confirm with the same probe before trusting the history again.
+
+**2. There is a savings feature in the database that no migration and no client code accounts for.** Neither of these appears anywhere in `supabase/migrations/` or in `src/`:
+
+| Object | Shape |
+|---|---|
+| `savings_entries` | `id` uuid PK · `group_id` → `groups(id)` CASCADE · `month` text · `amount` numeric · `note` text nullable · `created_at`. Currently **empty** (zero rows). |
+| `groups.savings_initial_balance` | numeric, default `0.00`, NOT NULL |
+
+They were almost certainly created in the Supabase dashboard while prototyping. **Do not build the RN app against them.** Decide first: either write the migration that documents them (and specify the feature properly, including RLS — I could not verify what policies they carry), or drop them. Until that decision is made they are outside this spec's scope, and §10 stands: there is no savings feature in the product.
+
+Everything below describes the schema as the app actually uses it.
 
 ### `groups`
 | Column | Type | Notes |
@@ -135,14 +154,15 @@ All tables are in `public`, all have RLS enabled, all financial tables are scope
 | `id` | uuid PK | This is the id income entries reference — **not** `user_id` |
 | `group_id` | uuid → `groups(id)` CASCADE | |
 | `user_id` | uuid → `auth.users(id)` CASCADE, nullable | |
+| ~~`invited_email`~~ | text nullable | Dropped by `0011`, still deployed (§5.1). Never selected — treat as absent |
 | `display_name` | text NOT NULL | |
 | `role` | text | `admin` \| `member` |
 | `color_index` | smallint 0–5 | `member_count % 6` at join time |
-| `status` | text | `active` only, post-`0011`. Kept because the RLS helpers and every membership query filter on it |
+| `status` | text | `active` in practice. `0011` narrows the check to that single value; until it actually applies (§5.1) the deployed constraint still permits `'invited'`. Kept either way — the RLS helpers and every membership query filter on it |
 | `created_at` | timestamptz | |
 | | | UNIQUE `(group_id, user_id)` |
 
-*RLS (post-`0011`):* **no insert policy** — memberships are only ever created by `create_group_with_owner` and `join_group_by_code`, which are security definer and bypass RLS, so a client insert is never legitimate. Update allowed for admins, or for your own row **provided `role` stays `member` and `status` stays `active`** (this is what stops self-promotion). Delete for admins or self.
+*RLS (once `0011` is in effect):* **no insert policy** — memberships are only ever created by `create_group_with_owner` and `join_group_by_code`, which are security definer and bypass RLS, so a client insert is never legitimate. The currently deployed policy is `0010`'s, which allows an active member to insert a `status = 'invited'`, `user_id IS NULL` placeholder and nothing else. Update allowed for admins, or for your own row **provided `role` stays `member` and `status` stays `active`** (this is what stops self-promotion). Delete for admins or self.
 
 ### `income_entries`
 `id` uuid PK · `group_id` → groups CASCADE · `member_id` → `group_members(id)` CASCADE · `category` text · `amount` numeric(10,2) CHECK > 0 · `note` text nullable · `entry_date` date DEFAULT current_date · `created_at`.
@@ -323,8 +343,9 @@ Each milestone is independently demoable. Estimates assume one developer.
 ### M0 — Backend deltas & project setup · ~3 days
 
 **Backend (do first, in `supabase/migrations/`):**
-1. `0012_native_push_tokens.sql` — see §9. (`0011` is already taken by the invite-by-email removal.)
-2. Decide findings #6, #7 and #8 above; migrate or adjust copy accordingly.
+1. **Reconcile the schema with the migrations — see §5.1.** Re-apply `0011`, and decide what happens to the undocumented `savings_entries` / `groups.savings_initial_balance`. Do this before generating types for the RN app, or they will bake in objects nothing explains.
+2. `0012_native_push_tokens.sql` — see §9. (`0011` is already taken by the invite-by-email removal.)
+3. Decide findings #6, #7 and #8 above; migrate or adjust copy accordingly.
 
 **App:**
 - `npx create-expo-app` with expo-router + TypeScript; EAS project configured.
