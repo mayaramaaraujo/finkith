@@ -16,7 +16,11 @@ export function LandingFooter({ footer, nav, locale }: LandingFooterProps) {
   const dict = getDictionary(locale);
 
   return (
-    <footer className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8">
+    <footer
+      className="mx-auto w-full max-w-6xl px-5 pt-14 sm:px-8"
+      // Keeps the last row clear of the iOS home indicator when installed.
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 3.5rem)" }}
+    >
       <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
         <div className="lg:col-span-2">
           <div className="flex items-center gap-2.5">

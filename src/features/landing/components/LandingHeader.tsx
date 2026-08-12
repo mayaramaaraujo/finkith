@@ -10,7 +10,12 @@ interface LandingHeaderProps {
 
 export function LandingHeader({ nav }: LandingHeaderProps) {
   return (
-    <header className="sticky top-0 z-50 border-b border-surface-border bg-bg-base/85 backdrop-blur-md">
+    <header
+      className="sticky top-0 z-50 border-b border-surface-border bg-bg-base/85 backdrop-blur-md"
+      // Installed as a PWA the page runs under a translucent status bar, so the
+      // bar's own background has to extend up behind it and the nav start below.
+      style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+    >
       <nav
         aria-label={SITE_NAME}
         className="mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-5 sm:px-8"
