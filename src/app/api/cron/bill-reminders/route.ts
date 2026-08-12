@@ -109,6 +109,8 @@ export async function GET(request: Request) {
       const locale = await getUserLocale(supabase, userId, localeCache);
       const { title, body } = reminderCopy(bill.name, dueInfo.status, locale);
 
+      let delivered = 0;
+
       for (const subscription of subscriptions ?? []) {
         try {
           await webpush.sendNotification(
@@ -118,12 +120,27 @@ export async function GET(request: Request) {
             },
             JSON.stringify({ title, body, billId: bill.id }),
           );
+          delivered++;
           sent++;
         } catch (err) {
           if (err instanceof webpush.WebPushError && (err.statusCode === 404 || err.statusCode === 410)) {
             await supabase.from("push_subscriptions").delete().eq("id", subscription.id);
           }
         }
+      }
+
+      // The row above is what stops a second send this cycle, so it's claimed
+      // before sending — but leaving it behind after a total failure (or when
+      // the user has no subscription yet) would suppress this reminder for the
+      // rest of the cycle. Release the claim so tomorrow's run tries again.
+      if (delivered === 0) {
+        await supabase
+          .from("bill_reminders_sent")
+          .delete()
+          .eq("bill_id", bill.id)
+          .eq("user_id", userId)
+          .eq("cycle_month", cycleMonth)
+          .eq("reminder_type", dueInfo.status);
       }
     }
   }
