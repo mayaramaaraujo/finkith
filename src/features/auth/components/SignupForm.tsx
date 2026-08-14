@@ -55,6 +55,17 @@ export function SignupForm({ next }: SignupFormProps) {
       return;
     }
 
+    // Signing up with an address that already has a confirmed account doesn't
+    // error — Supabase's enumeration protection returns a decoy user with no
+    // session and sends no email, which is indistinguishable from a real
+    // signup at `!data.session`. The empty `identities` array is the only tell,
+    // so it has to be checked first or the screen below promises an email that
+    // was never sent.
+    if (data.user?.identities?.length === 0) {
+      setError("root", { message: dict.errors.emailAlreadyRegistered });
+      return;
+    }
+
     // With email confirmation required, signUp doesn't return a session —
     // the account only becomes active once the user clicks the confirmation
     // link, which lands on /auth/callback and creates the session there.

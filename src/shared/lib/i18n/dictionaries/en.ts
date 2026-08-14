@@ -218,7 +218,7 @@ export const en = {
     invalidData: "Some of those details aren't valid. Check them and try again.",
     invalidCredentials: "That email and password don't match.",
     emailNotConfirmed: "Confirm your email first — check your inbox for the link.",
-    emailAlreadyRegistered: "An account already exists for that email.",
+    emailAlreadyRegistered: "An account already exists for that email. Sign in instead.",
     weakPassword: "Choose a stronger password.",
     tooManyRequests: "Too many attempts. Wait a minute and try again.",
   },

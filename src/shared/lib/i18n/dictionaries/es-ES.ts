@@ -220,7 +220,7 @@ export const esES: Dictionary = {
     invalidData: "Algunos datos no son válidos. Revísalos e inténtalo de nuevo.",
     invalidCredentials: "El correo y la contraseña no coinciden.",
     emailNotConfirmed: "Confirma tu correo primero — busca el enlace en tu bandeja de entrada.",
-    emailAlreadyRegistered: "Ya existe una cuenta con ese correo.",
+    emailAlreadyRegistered: "Ya existe una cuenta con ese correo. Inicia sesión.",
     weakPassword: "Elige una contraseña más segura.",
     tooManyRequests: "Demasiados intentos. Espera un minuto e inténtalo de nuevo.",
   },

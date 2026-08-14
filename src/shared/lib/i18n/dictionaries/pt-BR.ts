@@ -220,7 +220,7 @@ export const ptBR: Dictionary = {
     invalidData: "Alguns dados não são válidos. Confira e tente de novo.",
     invalidCredentials: "E-mail e senha não conferem.",
     emailNotConfirmed: "Confirme seu e-mail primeiro — procure o link na sua caixa de entrada.",
-    emailAlreadyRegistered: "Já existe uma conta com esse e-mail.",
+    emailAlreadyRegistered: "Já existe uma conta com esse e-mail. Faça login.",
     weakPassword: "Escolha uma senha mais forte.",
     tooManyRequests: "Muitas tentativas. Espere um minuto e tente de novo.",
   },
